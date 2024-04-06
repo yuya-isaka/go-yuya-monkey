@@ -5,7 +5,7 @@ import (
 )
 
 type Node interface {
-	TokenLiteral() string
+	GetTokenLiteral() string
 }
 
 type Statement interface {
@@ -18,31 +18,41 @@ type Expression interface {
 	expressionNode()
 }
 
+//--------------------
+
 type Program struct {
-	Statements []Statement
+	StatementArray []Statement
 }
 
-func (p *Program) TokenLiteral() string {
-	if len(p.Statements) > 0 {
-		return p.Statements[0].TokenLiteral()
+func (p *Program) GetTokenLiteral() string {
+	if len(p.StatementArray) > 0 {
+		return p.StatementArray[0].GetTokenLiteral()
 	} else {
 		return ""
 	}
 }
 
 type LetStatement struct {
-	Token token.Token
+	Token token.Token // let
 	Name  *Identifier
 	Value Expression
 }
 
-func (ls *LetStatement) statementNode()      {}
-func (ls LetStatement) TokenLiteral() string { return ls.Token.Literal }
+func (ls *LetStatement) statementNode()         {}
+func (ls LetStatement) GetTokenLiteral() string { return ls.Token.Literal }
 
 type Identifier struct {
 	Token token.Token
 	Value string
 }
 
-func (i *Identifier) expressionNode()     {}
-func (i Identifier) TokenLiteral() string { return i.Token.Literal }
+func (i *Identifier) expressionNode()        {}
+func (i Identifier) GetTokenLiteral() string { return i.Token.Literal }
+
+type ReturnStatement struct {
+	Token       token.Token
+	ReturnValue Expression
+}
+
+func (rs *ReturnStatement) statementNode()          {}
+func (rs *ReturnStatement) GetTokenLiteral() string { return rs.Token.Literal }
