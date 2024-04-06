@@ -1,3 +1,3 @@
-module github.com/yiuya-isaka/go-yuya-monkey
+module github.com/yuya-isaka/go-yuya-monkey
 
 go 1.22.2

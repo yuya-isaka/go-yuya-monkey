@@ -1,7 +1,7 @@
 package lexer
 
 import (
-	"github.com/yiuya-isaka/go-yuya-monkey/token"
+	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
 type Lexer struct {
@@ -35,23 +35,49 @@ func (l *Lexer) NextToken() token.Token {
 
 	switch l.ch {
 	case '=':
-		newTok = newToken(token.ASSIGN, l.ch)
+		if l.peek() == '=' {
+			ch := l.ch
+			l.eatChar()
+			literal := string(ch) + string(l.ch)
+			newTok = newToken(token.EQ, literal)
+		} else {
+			newTok = newToken(token.ASSIGN, string(l.ch))
+		}
 	case '+':
-		newTok = newToken(token.PLUS, l.ch)
+		newTok = newToken(token.PLUS, string(l.ch))
 	case ',':
-		newTok = newToken(token.COMMA, l.ch)
+		newTok = newToken(token.COMMA, string(l.ch))
 	case ';':
-		newTok = newToken(token.SEMICOLON, l.ch)
+		newTok = newToken(token.SEMICOLON, string(l.ch))
 	case '(':
-		newTok = newToken(token.LPAREN, l.ch)
+		newTok = newToken(token.LPAREN, string(l.ch))
 	case ')':
-		newTok = newToken(token.RPAREN, l.ch)
+		newTok = newToken(token.RPAREN, string(l.ch))
 	case '{':
-		newTok = newToken(token.LBRACE, l.ch)
+		newTok = newToken(token.LBRACE, string(l.ch))
 	case '}':
-		newTok = newToken(token.RBRACE, l.ch)
+		newTok = newToken(token.RBRACE, string(l.ch))
+	case '!':
+		if l.peek() == '=' {
+			ch := l.ch
+			l.eatChar()
+			literal := string(ch) + string(l.ch)
+			newTok = newToken(token.NOT_EQ, literal)
+		} else {
+			newTok = newToken(token.BANG, string(l.ch))
+		}
+	case '-':
+		newTok = newToken(token.MINUS, string(l.ch))
+	case '/':
+		newTok = newToken(token.SLASH, string(l.ch))
+	case '*':
+		newTok = newToken(token.ASTERISK, string(l.ch))
+	case '<':
+		newTok = newToken(token.LT, string(l.ch))
+	case '>':
+		newTok = newToken(token.GT, string(l.ch))
 	case 0:
-		newTok = newToken(token.EOF, l.ch)
+		newTok = newToken(token.EOF, string(l.ch))
 	default:
 		if isLetter(l.ch) {
 			newTok.Literal = l.readIdentifier()
@@ -62,7 +88,7 @@ func (l *Lexer) NextToken() token.Token {
 			newTok.Type = token.INT
 			return newTok
 		}
-		newTok = newToken(token.ILLEGAL, l.ch)
+		newTok = newToken(token.ILLEGAL, string(l.ch))
 	}
 
 	l.eatChar()
@@ -70,8 +96,8 @@ func (l *Lexer) NextToken() token.Token {
 	return newTok
 }
 
-func newToken(tt token.TokenType, literal byte) token.Token {
-	return token.Token{Type: tt, Literal: string(literal)}
+func newToken(tt token.TokenType, literal string) token.Token {
+	return token.Token{Type: tt, Literal: literal}
 }
 
 func isLetter(ch byte) bool {
@@ -102,4 +128,11 @@ func (l *Lexer) eatWhitespace() {
 	for l.ch == '\n' || l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
 		l.eatChar()
 	}
+}
+
+func (l *Lexer) peek() byte {
+	if l.readPosition >= len(l.input) {
+		return 0
+	}
+	return l.input[l.readPosition]
 }
