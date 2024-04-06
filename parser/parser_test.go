@@ -42,19 +42,6 @@ let foobar = 838383;
 	}
 }
 
-func checkParserErrors(t *testing.T, p *Parser) {
-	errors := p.Errors()
-	if len(errors) == 0 {
-		return
-	}
-
-	t.Errorf("parser has %d errors", len(errors))
-	for _, msg := range errors {
-		t.Errorf("parser error: %q", msg)
-	}
-	t.FailNow()
-}
-
 func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 	if s.GetTokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.GetTokenLiteral())
@@ -107,4 +94,17 @@ return 993322;
 			t.Errorf("returnStmt.TokenLiteral not 'return', got %q", returnStmt.GetTokenLiteral())
 		}
 	}
+}
+
+func checkParserErrors(t *testing.T, p *Parser) {
+	errors := p.Errors()
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("parser has %d errors", len(errors))
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+	t.FailNow()
 }
