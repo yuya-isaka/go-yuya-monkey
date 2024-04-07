@@ -48,7 +48,7 @@ func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	letStmt, ok := s.(*ast.LetStatement)
+	letStmt, ok := s.(*ast.LetStatement_1)
 	if !ok {
 		t.Errorf("s not *ast.LetStatement. got=%T", s)
 		return false
@@ -85,7 +85,7 @@ return 993322;
 	}
 
 	for _, stmt := range program.StatementArray {
-		returnStmt, ok := stmt.(*ast.ReturnStatement)
+		returnStmt, ok := stmt.(*ast.ReturnStatement_2)
 		if !ok {
 			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
 			continue

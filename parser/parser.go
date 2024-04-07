@@ -64,8 +64,8 @@ func (p *Parser) parseStatement() ast.Statement {
 	}
 }
 
-func (p *Parser) parseLetStatement() *ast.LetStatement {
-	stmt := &ast.LetStatement{Token: p.curToken}
+func (p *Parser) parseLetStatement() *ast.LetStatement_1 {
+	stmt := &ast.LetStatement_1{Token: p.curToken}
 
 	if !p.expectTokenIs(token.IDENT) {
 		return nil
@@ -85,8 +85,8 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 	return stmt
 }
 
-func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
-	stmt := &ast.ReturnStatement{Token: p.curToken}
+func (p *Parser) parseReturnStatement() *ast.ReturnStatement_2 {
+	stmt := &ast.ReturnStatement_2{Token: p.curToken}
 
 	p.nextToken()
 

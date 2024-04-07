@@ -32,14 +32,14 @@ func (p *Program) GetTokenLiteral() string {
 	}
 }
 
-type LetStatement struct {
+type LetStatement_1 struct {
 	Token token.Token // let
 	Name  *Identifier
 	Value Expression
 }
 
-func (ls *LetStatement) statementNode()         {}
-func (ls LetStatement) GetTokenLiteral() string { return ls.Token.Literal }
+func (ls *LetStatement_1) statementNode()         {}
+func (ls LetStatement_1) GetTokenLiteral() string { return ls.Token.Literal }
 
 type Identifier struct {
 	Token token.Token
@@ -49,10 +49,20 @@ type Identifier struct {
 func (i *Identifier) expressionNode()        {}
 func (i Identifier) GetTokenLiteral() string { return i.Token.Literal }
 
-type ReturnStatement struct {
+type ReturnStatement_2 struct {
 	Token       token.Token
 	ReturnValue Expression
 }
 
-func (rs *ReturnStatement) statementNode()          {}
-func (rs *ReturnStatement) GetTokenLiteral() string { return rs.Token.Literal }
+func (rs *ReturnStatement_2) statementNode()         {}
+func (rs ReturnStatement_2) GetTokenLiteral() string { return rs.Token.Literal }
+
+type ExpressionStatement_3 struct {
+	Token      token.Token
+	Expression Expression
+}
+
+func (es *ExpressionStatement_3) expressionNode() {}
+func (es ExpressionStatement_3) GetTokenLiteral() string {
+	return es.Token.Literal
+}
