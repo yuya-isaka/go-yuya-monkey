@@ -52,18 +52,18 @@ func NewParser(l *lexer.Lexer) *Parser {
 	p.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
 	p.registerPrefix(token.INT, p.parseIntegerContent)
-	p.registerPrefix(token.BANG, p.parsePrefixExpression)
-	p.registerPrefix(token.MINUS, p.parsePrefixExpression)
+	p.registerPrefix(token.BANG, p.parsePrefixExpression)  // 進める
+	p.registerPrefix(token.MINUS, p.parsePrefixExpression) // 進める
 
 	p.infixParseFnMap = make(map[token.TokenType]infixParseFn)
-	p.registerInfix(token.PLUS, p.parseInfixExpression)
-	p.registerInfix(token.MINUS, p.parseInfixExpression)
-	p.registerInfix(token.ASTERISK, p.parseInfixExpression)
-	p.registerInfix(token.SLASH, p.parseInfixExpression)
-	p.registerInfix(token.EQ, p.parseInfixExpression)
-	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)
-	p.registerInfix(token.LT, p.parseInfixExpression)
-	p.registerInfix(token.GT, p.parseInfixExpression)
+	p.registerInfix(token.PLUS, p.parseInfixExpression)     // 進める
+	p.registerInfix(token.MINUS, p.parseInfixExpression)    // 進める
+	p.registerInfix(token.ASTERISK, p.parseInfixExpression) // 進める
+	p.registerInfix(token.SLASH, p.parseInfixExpression)    // 進める
+	p.registerInfix(token.EQ, p.parseInfixExpression)       // 進める
+	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)   // 進める
+	p.registerInfix(token.LT, p.parseInfixExpression)       // 進める
+	p.registerInfix(token.GT, p.parseInfixExpression)       // 進める
 
 	p.nextToken()
 	p.nextToken()
@@ -157,9 +157,11 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 			return leftExp
 		}
 
+		// 1 +    2 +
 		p.nextToken()
-
+		// + 2    + 3
 		leftExp = infix(leftExp)
+		// 2 +    3 ;
 	}
 
 	return leftExp
@@ -273,9 +275,18 @@ func (p *Parser) parseInfixExpression(leftExpression ast.Expression) ast.Express
 		Operator: p.curToken.Content,
 	}
 
+	// ここが超大事
+	// parseExpressionを呼び出すときの、precedenceをどうするかで大きく変わってくる。
 	precedence := p.curPrecedence()
+
+	// + 2    + 3
 	p.nextToken()
+	// 2 +    3 ;
 	infixExpression.Right = p.parseExpression(precedence)
 
 	return infixExpression
 }
+
+// 1 + 3 + 4
+// LOWEST 1 + 3
+//
