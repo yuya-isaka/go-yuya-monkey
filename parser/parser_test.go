@@ -1,10 +1,12 @@
 package parser
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/yuya-isaka/go-yuya-monkey/ast"
 	"github.com/yuya-isaka/go-yuya-monkey/lexer"
+	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
 func TestLetStatements(t *testing.T) {
@@ -159,7 +161,7 @@ func TestIntegerContentExpression(t *testing.T) {
 	}
 
 	// それの式はIntegerContentだよね？
-	integerContent, ok := stmt.Expression.(*ast.IntegerContent)
+	integerContent, ok := stmt.Expression.(*ast.Integer)
 	if !ok {
 		t.Fatalf("exp not *ast.IntegerContent. got=%T", stmt.Expression)
 	}
@@ -173,4 +175,67 @@ func TestIntegerContentExpression(t *testing.T) {
 	}
 
 	// 上記のアサーションを設ける
+}
+
+func TestParsingPrefixExpressions(t *testing.T) {
+	prefixTests := []struct {
+		input        string
+		tokentype    token.TokenType
+		operator     string
+		integerValue int64
+	}{
+		{"!5", token.BANG, "!", 5},
+		{"-15", token.MINUS, "-", 15},
+	}
+
+	for _, tt := range prefixTests {
+		l := lexer.NewLexer(tt.input)
+		p := NewParser(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.StatementArray) != 1 {
+			t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
+		}
+
+		stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+		if !ok {
+			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+		}
+
+		if stmt.Token.Type != tt.tokentype {
+			t.Fatalf("stmt.Token.Type is not %q. got=%q", tt.tokentype, stmt.Token.Type)
+		}
+
+		prefixExp, ok := stmt.Expression.(*ast.PrefixExpression)
+		if !ok {
+			t.Fatalf("stmt is not ast.PrefixExpression. got=%T", stmt.Expression)
+		}
+		if prefixExp.Operator != tt.operator {
+			t.Fatalf("pex.Operator is not '%s'. got=%s", tt.operator, prefixExp.Operator)
+		}
+		if !testIntegerContent(t, prefixExp.Right, tt.integerValue) {
+			return
+		}
+	}
+}
+
+func testIntegerContent(t *testing.T, expression ast.Expression, integerValue int64) bool {
+	integer, ok := expression.(*ast.Integer)
+	if !ok {
+		t.Errorf("expression no *ast.Integer. got=%T", expression)
+		return false
+	}
+
+	if integer.IntegerValue != integerValue {
+		t.Errorf("integer.IntegerValue not %d, got=%d", integerValue, integer.IntegerValue)
+		return false
+	}
+
+	if integer.GetTokenContent() != fmt.Sprintf("%d", integerValue) {
+		t.Errorf("integer.GetTokenContent not %d, got=%s", integerValue, integer.GetTokenContent())
+		return false
+	}
+
+	return true
 }

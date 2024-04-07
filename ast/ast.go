@@ -125,15 +125,35 @@ func (es ExpressionStatement_3) String() string {
 	return ""
 }
 
-type IntegerContent struct {
+type Integer struct {
 	Token        token.Token
 	IntegerValue int64
 }
 
-func (i *IntegerContent) expressionNode() {}
-func (i IntegerContent) GetTokenContent() string {
+func (i *Integer) expressionNode() {}
+func (i Integer) GetTokenContent() string {
 	return i.Token.Content
 }
-func (i IntegerContent) String() string {
+func (i Integer) String() string {
 	return i.Token.Content
+}
+
+type PrefixExpression struct {
+	Token    token.Token
+	Operator string
+	Right    Expression
+}
+
+func (p *PrefixExpression) expressionNode() {}
+func (p *PrefixExpression) GetTokenContent() string {
+	return p.Token.Content
+}
+func (p *PrefixExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString("(")
+	out.WriteString(p.Operator)
+	out.WriteString(p.Right.String())
+	out.WriteString(")")
+
+	return out.String()
 }
