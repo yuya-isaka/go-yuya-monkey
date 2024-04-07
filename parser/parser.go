@@ -29,20 +29,11 @@ func NewParser(l *lexer.Lexer) *Parser {
 	return p
 }
 
-func (p *Parser) Errors() []string {
-	return p.errors
-}
-
-func (p *Parser) nextToken() {
-	p.curToken = p.peekToken
-	p.peekToken = p.l.NextToken()
-}
-
 func (p *Parser) ParseProgram() *ast.Program {
 	program := &ast.Program{}
 	program.StatementArray = []ast.Statement{}
 
-	for p.curToken.Type != token.EOF {
+	for !p.curTokenIs(token.EOF) {
 		stmt := p.parseStatement()
 		if stmt != nil {
 			program.StatementArray = append(program.StatementArray, stmt)
@@ -100,6 +91,11 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement_2 {
 
 //--------------------
 
+func (p *Parser) nextToken() {
+	p.curToken = p.peekToken
+	p.peekToken = p.l.NextToken()
+}
+
 func (p *Parser) curTokenIs(t token.TokenType) bool {
 	return p.curToken.Type == t
 }
@@ -116,6 +112,12 @@ func (p *Parser) expectTokenIs(t token.TokenType) bool {
 		p.peekError(t)
 		return false
 	}
+}
+
+//--------------------
+
+func (p *Parser) Errors() []string {
+	return p.errors
 }
 
 func (p *Parser) peekError(t token.TokenType) {
