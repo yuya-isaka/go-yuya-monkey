@@ -8,6 +8,17 @@ import (
 	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
+const (
+	_ int = iota
+	LOWEST
+	EQUALS
+	LESSGREATER
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+)
+
 type Parser struct {
 	l *lexer.Lexer
 
@@ -15,6 +26,9 @@ type Parser struct {
 	peekToken token.Token
 
 	errors []string
+
+	prefixParseFnMap map[token.TokenType]prefixParseFn
+	infixParseFnMap  map[token.TokenType]infixParseFn
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
@@ -22,6 +36,9 @@ func NewParser(l *lexer.Lexer) *Parser {
 		l:      l,
 		errors: []string{},
 	}
+
+	p.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
+	p.registerPrefix(token.IDENT, p.parseIdentifier)
 
 	p.nextToken()
 	p.nextToken()
@@ -51,18 +68,18 @@ func (p *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
 func (p *Parser) parseLetStatement() *ast.LetStatement_1 {
-	stmt := &ast.LetStatement_1{Token: p.curToken}
+	letstmt := &ast.LetStatement_1{Token: p.curToken}
 
 	if !p.expectTokenIs(token.IDENT) {
 		return nil
 	}
 
-	stmt.Name = &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	letstmt.IdentName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Literal}
 
 	if !p.expectTokenIs(token.ASSIGN) {
 		return nil
@@ -73,11 +90,11 @@ func (p *Parser) parseLetStatement() *ast.LetStatement_1 {
 		p.nextToken()
 	}
 
-	return stmt
+	return letstmt
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement_2 {
-	stmt := &ast.ReturnStatement_2{Token: p.curToken}
+	returnstmt := &ast.ReturnStatement_2{Token: p.curToken}
 
 	p.nextToken()
 
@@ -86,7 +103,28 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement_2 {
 		p.nextToken()
 	}
 
-	return stmt
+	return returnstmt
+}
+
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement_3 {
+	esstmt := &ast.ExpressionStatement_3{Token: p.curToken}
+	esstmt.Expression = p.parseExpression(LOWEST)
+	// 式文のセミコロンなしはエラーにしない。
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return esstmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFnMap[p.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+
+	leftExp := prefix()
+	return leftExp
 }
 
 //--------------------
@@ -123,4 +161,23 @@ func (p *Parser) Errors() []string {
 func (p *Parser) peekError(t token.TokenType) {
 	msg := fmt.Sprintf("expected nexttoken to be %s, got %s instead", t, p.peekToken.Type)
 	p.errors = append(p.errors, msg)
+}
+
+//--------------------
+
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
+func (p *Parser) registerPrefix(tt token.TokenType, fn prefixParseFn) {
+	p.prefixParseFnMap[tt] = fn
+}
+
+func (p *Parser) registerInfix(tt token.TokenType, fn infixParseFn) {
+	p.infixParseFnMap[tt] = fn
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Literal}
 }

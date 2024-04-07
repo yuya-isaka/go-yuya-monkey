@@ -54,13 +54,13 @@ func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	if letStmt.Name.Value != name {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.Name.Value)
+	if letStmt.IdentName.IdentValue != name {
+		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.IdentName.IdentValue)
 		return false
 	}
 
-	if letStmt.Name.GetTokenLiteral() != name {
-		t.Errorf("letStmt.Name.TokenLiteral() not '%s'. got=%s", name, letStmt.Name.GetTokenLiteral())
+	if letStmt.IdentName.GetTokenLiteral() != name {
+		t.Errorf("letStmt.Name.TokenLiteral() not '%s'. got=%s", name, letStmt.IdentName.GetTokenLiteral())
 		return false
 	}
 
@@ -107,4 +107,34 @@ func checkParserErrors(t *testing.T, p *Parser) {
 		t.Errorf("parser error: %q", msg)
 	}
 	t.FailNow()
+}
+
+func TestIdentifierExpression(t *testing.T) {
+	input := "foobar;"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	if len(program.StatementArray) != 1 {
+		t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
+	}
+
+	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+	if !ok {
+		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+	}
+
+	ident, ok := stmt.Expression.(*ast.Identifier)
+	if !ok {
+		t.Fatalf("exp not *ast.Identifier. got=%T", stmt.Expression)
+	}
+	if ident.IdentValue != "foobar" {
+		t.Errorf("ident.Value not %s. got=%s", "foobar", ident.IdentValue)
+	}
+	if ident.GetTokenLiteral() != "foobar" {
+		t.Errorf("ident.GetTokenLiteral not %s. got=%s", "foobar", ident.GetTokenLiteral())
+	}
 }

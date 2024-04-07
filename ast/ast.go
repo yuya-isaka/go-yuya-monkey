@@ -48,9 +48,9 @@ func (p *Program) String() string {
 //--------------------
 
 type LetStatement_1 struct {
-	Token token.Token // let
-	Name  *Identifier
-	Value Expression
+	Token     token.Token // let
+	IdentName *Identifier
+	LetValue  Expression
 }
 
 func (ls *LetStatement_1) statementNode() {}
@@ -61,11 +61,11 @@ func (ls LetStatement_1) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(ls.GetTokenLiteral() + " ")
-	out.WriteString(ls.Name.String())
+	out.WriteString(ls.IdentName.String())
 	out.WriteString(" = ")
 
-	if ls.Value != nil {
-		out.WriteString(ls.Value.String())
+	if ls.LetValue != nil {
+		out.WriteString(ls.LetValue.String())
 	}
 
 	out.WriteString(";")
@@ -74,8 +74,8 @@ func (ls LetStatement_1) String() string {
 }
 
 type Identifier struct {
-	Token token.Token
-	Value string
+	Token      token.Token
+	IdentValue string
 }
 
 func (i *Identifier) expressionNode() {}
@@ -83,7 +83,7 @@ func (i Identifier) GetTokenLiteral() string {
 	return i.Token.Literal
 }
 func (i Identifier) String() string {
-	return i.Value
+	return i.IdentValue
 }
 
 type ReturnStatement_2 struct {
@@ -114,7 +114,7 @@ type ExpressionStatement_3 struct {
 	Expression Expression
 }
 
-func (es *ExpressionStatement_3) expressionNode() {}
+func (es *ExpressionStatement_3) statementNode() {}
 func (es ExpressionStatement_3) GetTokenLiteral() string {
 	return es.Token.Literal
 }
