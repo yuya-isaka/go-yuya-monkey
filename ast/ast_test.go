@@ -9,7 +9,7 @@ import (
 func TestString(t *testing.T) {
 	program := &Program{
 		StatementArray: []Statement{
-			&LetStatement_1{
+			&LetStatement{
 				Token: token.Token{Type: token.LET, Content: "let"},
 				IdentName: &Identifier{
 					Token:      token.Token{Type: token.IDENT, Content: "myVar"},

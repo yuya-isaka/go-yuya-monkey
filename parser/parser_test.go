@@ -50,7 +50,7 @@ func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	letStmt, ok := s.(*ast.LetStatement_1)
+	letStmt, ok := s.(*ast.LetStatement)
 	if !ok {
 		t.Errorf("s not *ast.LetStatement. got=%T", s)
 		return false
@@ -68,6 +68,8 @@ func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 
 	return true
 }
+
+//----------------------------------
 
 func TestReturnStatements(t *testing.T) {
 	input := `
@@ -87,7 +89,7 @@ return 993322;
 	}
 
 	for _, stmt := range program.StatementArray {
-		returnStmt, ok := stmt.(*ast.ReturnStatement_2)
+		returnStmt, ok := stmt.(*ast.ReturnStatement)
 		if !ok {
 			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
 			continue
@@ -97,6 +99,8 @@ return 993322;
 		}
 	}
 }
+
+//----------------------------------
 
 func checkParserErrors(t *testing.T, p *Parser) {
 	errors := p.Errors()
@@ -111,7 +115,29 @@ func checkParserErrors(t *testing.T, p *Parser) {
 	t.FailNow()
 }
 
-func TestIdentifierExpression(t *testing.T) {
+func testIntegerContent(t *testing.T, expression ast.Expression, integerValue int64) bool {
+	integer, ok := expression.(*ast.Integer)
+	if !ok {
+		t.Errorf("expression no *ast.Integer. got=%T", expression)
+		return false
+	}
+
+	if integer.IntegerValue != integerValue {
+		t.Errorf("integer.IntegerValue not %d, got=%d", integerValue, integer.IntegerValue)
+		return false
+	}
+
+	if integer.GetTokenContent() != fmt.Sprintf("%d", integerValue) {
+		t.Errorf("integer.GetTokenContent not %d, got=%s", integerValue, integer.GetTokenContent())
+		return false
+	}
+
+	return true
+}
+
+//----------------------------------
+
+func TestIdentifierExpressions(t *testing.T) {
 	input := "foobar;"
 
 	l := lexer.NewLexer(input)
@@ -124,9 +150,9 @@ func TestIdentifierExpression(t *testing.T) {
 		t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
 	}
 
-	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement)
 	if !ok {
-		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
 	}
 
 	ident, ok := stmt.Expression.(*ast.Identifier)
@@ -141,7 +167,7 @@ func TestIdentifierExpression(t *testing.T) {
 	}
 }
 
-func TestIntegerContentExpression(t *testing.T) {
+func TestIntegerContentExpressions(t *testing.T) {
 	input := "42;"
 
 	l := lexer.NewLexer(input)
@@ -155,9 +181,9 @@ func TestIntegerContentExpression(t *testing.T) {
 	}
 
 	// 最初の文がExpressionStatementだよね？
-	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement)
 	if !ok {
-		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
 	}
 
 	// それの式はIntegerContentだよね？
@@ -198,9 +224,9 @@ func TestParsingPrefixExpressions(t *testing.T) {
 			t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
 		}
 
-		stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+		stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement)
 		if !ok {
-			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
 		}
 
 		if stmt.Token.Type != tt.tokentype {
@@ -220,22 +246,54 @@ func TestParsingPrefixExpressions(t *testing.T) {
 	}
 }
 
-func testIntegerContent(t *testing.T, expression ast.Expression, integerValue int64) bool {
-	integer, ok := expression.(*ast.Integer)
-	if !ok {
-		t.Errorf("expression no *ast.Integer. got=%T", expression)
-		return false
+func TestParsingInfixExpressions(t *testing.T) {
+	infixTests := []struct {
+		input      string
+		leftValue  int64
+		operator   string
+		rightValue int64
+	}{
+		{"5 + 5;", 5, "+", 5},
+		{"5 - 5;", 5, "-", 5},
+		{"5 * 5;", 5, "*", 5},
+		{"5 / 5;", 5, "/", 5},
+		{"5 > 5;", 5, ">", 5},
+		{"5 < 5;", 5, "<", 5},
+		{"5 == 5;", 5, "==", 5},
+		{"5 != 5;", 5, "!=", 5},
 	}
 
-	if integer.IntegerValue != integerValue {
-		t.Errorf("integer.IntegerValue not %d, got=%d", integerValue, integer.IntegerValue)
-		return false
-	}
+	for _, tt := range infixTests {
+		l := lexer.NewLexer(tt.input)
+		p := NewParser(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
 
-	if integer.GetTokenContent() != fmt.Sprintf("%d", integerValue) {
-		t.Errorf("integer.GetTokenContent not %d, got=%s", integerValue, integer.GetTokenContent())
-		return false
-	}
+		if len(program.StatementArray) != 1 {
+			t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
+		}
 
-	return true
+		stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
+		}
+
+		expression, ok := stmt.Expression.(*ast.InfixExpression)
+		if !ok {
+			t.Fatalf("expression is not ast.InfixExpression. got=%T", stmt.Expression)
+		}
+
+		if !testIntegerContent(t, expression.Left, tt.leftValue) {
+			return
+		}
+
+		if expression.Operator != tt.operator {
+			t.Fatalf("expression.Operator is not '%s'. got=%s", tt.operator, expression.Operator)
+		}
+
+		if !testIntegerContent(t, expression.Right, tt.rightValue) {
+			return
+		}
+
+	}
 }

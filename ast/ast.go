@@ -47,17 +47,17 @@ func (p *Program) String() string {
 
 //--------------------
 
-type LetStatement_1 struct {
+type LetStatement struct {
 	Token     token.Token // let
 	IdentName *Identifier
 	LetValue  Expression
 }
 
-func (ls *LetStatement_1) statementNode() {}
-func (ls LetStatement_1) GetTokenContent() string {
+func (ls *LetStatement) statementNode() {}
+func (ls LetStatement) GetTokenContent() string {
 	return ls.Token.Content
 }
-func (ls LetStatement_1) String() string {
+func (ls LetStatement) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(ls.GetTokenContent() + " ")
@@ -86,16 +86,16 @@ func (i Identifier) String() string {
 	return i.IdentValue
 }
 
-type ReturnStatement_2 struct {
+type ReturnStatement struct {
 	Token       token.Token
 	ReturnValue Expression
 }
 
-func (rs *ReturnStatement_2) statementNode() {}
-func (rs ReturnStatement_2) GetTokenContent() string {
+func (rs *ReturnStatement) statementNode() {}
+func (rs ReturnStatement) GetTokenContent() string {
 	return rs.Token.Content
 }
-func (rs ReturnStatement_2) String() string {
+func (rs ReturnStatement) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(rs.GetTokenContent() + " ")
@@ -109,16 +109,16 @@ func (rs ReturnStatement_2) String() string {
 	return out.String()
 }
 
-type ExpressionStatement_3 struct {
+type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
 }
 
-func (es *ExpressionStatement_3) statementNode() {}
-func (es ExpressionStatement_3) GetTokenContent() string {
+func (es *ExpressionStatement) statementNode() {}
+func (es ExpressionStatement) GetTokenContent() string {
 	return es.Token.Content
 }
-func (es ExpressionStatement_3) String() string {
+func (es ExpressionStatement) String() string {
 	if es.Expression != nil {
 		return es.Expression.String()
 	}
@@ -145,14 +145,37 @@ type PrefixExpression struct {
 }
 
 func (p *PrefixExpression) expressionNode() {}
-func (p *PrefixExpression) GetTokenContent() string {
+func (p PrefixExpression) GetTokenContent() string {
 	return p.Token.Content
 }
-func (p *PrefixExpression) String() string {
+func (p PrefixExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("(")
 	out.WriteString(p.Operator)
 	out.WriteString(p.Right.String())
+	out.WriteString(")")
+
+	return out.String()
+}
+
+type InfixExpression struct {
+	Token    token.Token
+	Left     Expression
+	Operator string
+	Right    Expression
+}
+
+func (i *InfixExpression) expressionNode() {}
+func (i InfixExpression) GetTokenContent() string {
+	return i.Token.Content
+}
+func (i InfixExpression) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(i.Left.String())
+	out.WriteString(" " + i.Operator + " ")
+	out.WriteString(i.Right.String())
 	out.WriteString(")")
 
 	return out.String()
