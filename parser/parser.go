@@ -72,6 +72,8 @@ func NewParser(l *lexer.Lexer) *Parser {
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
+	defer untrace(trace("ParseProgram"))
+
 	program := &ast.Program{}
 	program.StatementArray = []ast.Statement{}
 
@@ -87,6 +89,8 @@ func (p *Parser) ParseProgram() *ast.Program {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
+	defer untrace(trace("parseStatement"))
+
 	switch p.curToken.Type {
 	case token.LET:
 		return p.parseLetStatement()
@@ -98,6 +102,8 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 func (p *Parser) parseLetStatement() *ast.LetStatement {
+	defer untrace(trace("parseLetStatement"))
+
 	letstmt := &ast.LetStatement{Token: p.curToken}
 
 	if !p.expectTokenIs(token.IDENT) {
@@ -119,6 +125,8 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 }
 
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
+	defer untrace(trace("parseReturnStatement"))
+
 	returnstmt := &ast.ReturnStatement{Token: p.curToken}
 
 	p.nextToken()
@@ -132,6 +140,8 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 }
 
 func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	defer untrace(trace("parseExpressionStatement"))
+
 	esstmt := &ast.ExpressionStatement{Token: p.curToken}
 	esstmt.Expression = p.parseExpression(LOWEST)
 	// 式文のセミコロンなしはエラーにしない。
@@ -143,6 +153,8 @@ func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
+	defer untrace(trace("parseExpression"))
+
 	prefix := p.prefixParseFnMap[p.curToken.Type]
 	if prefix == nil {
 		p.noPrefixParseFnError(p.curToken.Type)
@@ -242,10 +254,14 @@ func (p *Parser) registerInfix(tt token.TokenType, fn infixParseFn) {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
+	defer untrace(trace("parseIdentifier"))
+
 	return &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
 }
 
 func (p *Parser) parseIntegerContent() ast.Expression {
+	defer untrace(trace("parseIntegerContent"))
+
 	integerValue, err := strconv.ParseInt(p.curToken.Content, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Content)
@@ -256,6 +272,8 @@ func (p *Parser) parseIntegerContent() ast.Expression {
 }
 
 func (p *Parser) parsePrefixExpression() ast.Expression {
+	defer untrace(trace("parsePrefixExpression"))
+
 	prefixExpression := &ast.PrefixExpression{
 		Token:    p.curToken,
 		Operator: p.curToken.Content,
@@ -269,6 +287,8 @@ func (p *Parser) parsePrefixExpression() ast.Expression {
 }
 
 func (p *Parser) parseInfixExpression(leftExpression ast.Expression) ast.Expression {
+	defer untrace(trace("parseInfixExpression"))
+
 	infixExpression := &ast.InfixExpression{
 		Token:    p.curToken,
 		Left:     leftExpression,
