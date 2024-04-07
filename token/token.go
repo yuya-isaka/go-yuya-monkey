@@ -34,7 +34,7 @@ type TokenType string
 
 type Token struct {
 	Type    TokenType
-	Literal string
+	Content string
 }
 
 var keywords = map[string]TokenType{
@@ -47,8 +47,8 @@ var keywords = map[string]TokenType{
 	"false":  FALSE,
 }
 
-func LookKeywordToken(literal string) TokenType {
-	if tok, ok := keywords[literal]; ok {
+func LookKeywordToken(content string) TokenType {
+	if tok, ok := keywords[content]; ok {
 		return tok
 	}
 	return IDENT

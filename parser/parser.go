@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/yuya-isaka/go-yuya-monkey/ast"
 	"github.com/yuya-isaka/go-yuya-monkey/lexer"
@@ -39,6 +40,7 @@ func NewParser(l *lexer.Lexer) *Parser {
 
 	p.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
 	p.registerPrefix(token.IDENT, p.parseIdentifier)
+	p.registerPrefix(token.INT, p.parseIntegerContent)
 
 	p.nextToken()
 	p.nextToken()
@@ -79,7 +81,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement_1 {
 		return nil
 	}
 
-	letstmt.IdentName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Literal}
+	letstmt.IdentName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
 
 	if !p.expectTokenIs(token.ASSIGN) {
 		return nil
@@ -179,5 +181,15 @@ func (p *Parser) registerInfix(tt token.TokenType, fn infixParseFn) {
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {
-	return &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Literal}
+	return &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
+}
+
+func (p *Parser) parseIntegerContent() ast.Expression {
+	integerValue, err := strconv.ParseInt(p.curToken.Content, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Content)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	return &ast.IntegerContent{Token: p.curToken, IntegerValue: integerValue}
 }

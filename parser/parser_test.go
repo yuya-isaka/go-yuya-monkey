@@ -43,8 +43,8 @@ let foobar = 838383;
 }
 
 func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
-	if s.GetTokenLiteral() != "let" {
-		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.GetTokenLiteral())
+	if s.GetTokenContent() != "let" {
+		t.Errorf("s.TokenContent not 'let'. got=%q", s.GetTokenContent())
 		return false
 	}
 
@@ -59,8 +59,8 @@ func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
 		return false
 	}
 
-	if letStmt.IdentName.GetTokenLiteral() != name {
-		t.Errorf("letStmt.Name.TokenLiteral() not '%s'. got=%s", name, letStmt.IdentName.GetTokenLiteral())
+	if letStmt.IdentName.GetTokenContent() != name {
+		t.Errorf("letStmt.Name.TokenContent() not '%s'. got=%s", name, letStmt.IdentName.GetTokenContent())
 		return false
 	}
 
@@ -90,8 +90,8 @@ return 993322;
 			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
 			continue
 		}
-		if returnStmt.GetTokenLiteral() != "return" {
-			t.Errorf("returnStmt.TokenLiteral not 'return', got %q", returnStmt.GetTokenLiteral())
+		if returnStmt.GetTokenContent() != "return" {
+			t.Errorf("returnStmt.TokenContent not 'return', got %q", returnStmt.GetTokenContent())
 		}
 	}
 }
@@ -134,7 +134,43 @@ func TestIdentifierExpression(t *testing.T) {
 	if ident.IdentValue != "foobar" {
 		t.Errorf("ident.Value not %s. got=%s", "foobar", ident.IdentValue)
 	}
-	if ident.GetTokenLiteral() != "foobar" {
-		t.Errorf("ident.GetTokenLiteral not %s. got=%s", "foobar", ident.GetTokenLiteral())
+	if ident.GetTokenContent() != "foobar" {
+		t.Errorf("ident.GetTokenContent not %s. got=%s", "foobar", ident.GetTokenContent())
 	}
+}
+
+func TestIntegerContentExpression(t *testing.T) {
+	input := "42;"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	// 正しい数の文が生成されたか
+	if len(program.StatementArray) != 1 {
+		t.Fatalf("program has not enough statements. got=%d", len(program.StatementArray))
+	}
+
+	// 最初の文がExpressionStatementだよね？
+	stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement_3)
+	if !ok {
+		t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement_3. got=%T", program.StatementArray[0])
+	}
+
+	// それの式はIntegerContentだよね？
+	integerContent, ok := stmt.Expression.(*ast.IntegerContent)
+	if !ok {
+		t.Fatalf("exp not *ast.IntegerContent. got=%T", stmt.Expression)
+	}
+	// それの中身は42だよね？
+	if integerContent.IntegerValue != 42 {
+		t.Errorf("integerContent.IntegerValue not %d. got=%d", 42, integerContent.IntegerValue)
+	}
+	// トークンとして取得したら"42"だよね？
+	if integerContent.GetTokenContent() != "42" {
+		t.Errorf("integerContent.GetTokenContent not %s. got=%s", "42", integerContent.GetTokenContent())
+	}
+
+	// 上記のアサーションを設ける
 }

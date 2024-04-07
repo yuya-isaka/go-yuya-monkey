@@ -38,8 +38,8 @@ func (l *Lexer) NextToken() token.Token {
 		if l.peek() == '=' {
 			ch := l.ch
 			l.eatChar()
-			literal := string(ch) + string(l.ch)
-			newTok = newToken(token.EQ, literal)
+			content := string(ch) + string(l.ch)
+			newTok = newToken(token.EQ, content)
 		} else {
 			newTok = newToken(token.ASSIGN, string(l.ch))
 		}
@@ -61,8 +61,8 @@ func (l *Lexer) NextToken() token.Token {
 		if l.peek() == '=' {
 			ch := l.ch
 			l.eatChar()
-			literal := string(ch) + string(l.ch)
-			newTok = newToken(token.NOT_EQ, literal)
+			content := string(ch) + string(l.ch)
+			newTok = newToken(token.NOT_EQ, content)
 		} else {
 			newTok = newToken(token.BANG, string(l.ch))
 		}
@@ -80,11 +80,11 @@ func (l *Lexer) NextToken() token.Token {
 		newTok = newToken(token.EOF, string(l.ch))
 	default:
 		if isLetter(l.ch) {
-			newTok.Literal = l.readIdentifier()
-			newTok.Type = token.LookKeywordToken(newTok.Literal)
+			newTok.Content = l.readIdentifier()
+			newTok.Type = token.LookKeywordToken(newTok.Content)
 			return newTok
 		} else if isNumber(l.ch) {
-			newTok.Literal = l.readNumber()
+			newTok.Content = l.readNumber()
 			newTok.Type = token.INT
 			return newTok
 		}
@@ -96,8 +96,8 @@ func (l *Lexer) NextToken() token.Token {
 	return newTok
 }
 
-func newToken(tt token.TokenType, literal string) token.Token {
-	return token.Token{Type: tt, Literal: literal}
+func newToken(tt token.TokenType, content string) token.Token {
+	return token.Token{Type: tt, Content: content}
 }
 
 func isLetter(ch byte) bool {

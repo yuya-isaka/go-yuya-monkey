@@ -7,7 +7,7 @@ import (
 )
 
 type Node interface {
-	GetTokenLiteral() string
+	GetTokenContent() string
 	String() string
 }
 
@@ -27,9 +27,9 @@ type Program struct {
 	StatementArray []Statement
 }
 
-func (p *Program) GetTokenLiteral() string {
+func (p *Program) GetTokenContent() string {
 	if len(p.StatementArray) > 0 {
-		return p.StatementArray[0].GetTokenLiteral()
+		return p.StatementArray[0].GetTokenContent()
 	} else {
 		return ""
 	}
@@ -54,13 +54,13 @@ type LetStatement_1 struct {
 }
 
 func (ls *LetStatement_1) statementNode() {}
-func (ls LetStatement_1) GetTokenLiteral() string {
-	return ls.Token.Literal
+func (ls LetStatement_1) GetTokenContent() string {
+	return ls.Token.Content
 }
 func (ls LetStatement_1) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(ls.GetTokenLiteral() + " ")
+	out.WriteString(ls.GetTokenContent() + " ")
 	out.WriteString(ls.IdentName.String())
 	out.WriteString(" = ")
 
@@ -79,8 +79,8 @@ type Identifier struct {
 }
 
 func (i *Identifier) expressionNode() {}
-func (i Identifier) GetTokenLiteral() string {
-	return i.Token.Literal
+func (i Identifier) GetTokenContent() string {
+	return i.Token.Content
 }
 func (i Identifier) String() string {
 	return i.IdentValue
@@ -92,13 +92,13 @@ type ReturnStatement_2 struct {
 }
 
 func (rs *ReturnStatement_2) statementNode() {}
-func (rs ReturnStatement_2) GetTokenLiteral() string {
-	return rs.Token.Literal
+func (rs ReturnStatement_2) GetTokenContent() string {
+	return rs.Token.Content
 }
 func (rs ReturnStatement_2) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(rs.GetTokenLiteral() + " ")
+	out.WriteString(rs.GetTokenContent() + " ")
 
 	if rs.ReturnValue != nil {
 		out.WriteString(rs.ReturnValue.String())
@@ -115,12 +115,25 @@ type ExpressionStatement_3 struct {
 }
 
 func (es *ExpressionStatement_3) statementNode() {}
-func (es ExpressionStatement_3) GetTokenLiteral() string {
-	return es.Token.Literal
+func (es ExpressionStatement_3) GetTokenContent() string {
+	return es.Token.Content
 }
 func (es ExpressionStatement_3) String() string {
 	if es.Expression != nil {
 		return es.Expression.String()
 	}
 	return ""
+}
+
+type IntegerContent struct {
+	Token        token.Token
+	IntegerValue int64
+}
+
+func (i *IntegerContent) expressionNode() {}
+func (i IntegerContent) GetTokenContent() string {
+	return i.Token.Content
+}
+func (i IntegerContent) String() string {
+	return i.Token.Content
 }

@@ -30,7 +30,7 @@ if (5 < 10) {
 
 	tests := []struct {
 		expectedType    token.TokenType
-		expectedLiteral string
+		expectedContent string
 	}{
 		{token.LET, "let"},
 		{token.IDENT, "five"},
@@ -118,9 +118,9 @@ if (5 < 10) {
 				i, tt.expectedType, tok.Type)
 		}
 
-		if tok.Literal != tt.expectedLiteral {
-			t.Fatalf("tests[%d] - literal wrong. expected=%q, got=%q",
-				i, tt.expectedLiteral, tok.Literal)
+		if tok.Content != tt.expectedContent {
+			t.Fatalf("tests[%d] - Content wrong. expected=%q, got=%q",
+				i, tt.expectedContent, tok.Content)
 		}
 	}
 }
