@@ -6,7 +6,6 @@ import (
 
 	"github.com/yuya-isaka/go-yuya-monkey/ast"
 	"github.com/yuya-isaka/go-yuya-monkey/lexer"
-	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
 // テスト、パーサー
@@ -195,13 +194,14 @@ func TestIntegerContentExpressions(t *testing.T) {
 
 func TestParsingPrefixExpressions(t *testing.T) {
 	prefixTests := []struct {
-		input        string
-		tokentype    token.TokenType
-		operator     string
-		integerValue int64
+		input    string
+		operator string
+		value    interface{}
 	}{
-		{"!5", token.BANG, "!", 5},
-		{"-15", token.MINUS, "-", 15},
+		{"!5", "!", 5},
+		{"-15", "-", 15},
+		{"!true;", "!", true},
+		{"!false", "!", false},
 	}
 
 	for _, tt := range prefixTests {
@@ -219,18 +219,14 @@ func TestParsingPrefixExpressions(t *testing.T) {
 			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
 		}
 
-		if stmt.Token.Type != tt.tokentype {
-			t.Fatalf("stmt.Token.Type is not %q. got=%q", tt.tokentype, stmt.Token.Type)
-		}
-
-		prefixExp, ok := stmt.Expression.(*ast.PrefixExpression)
+		expression, ok := stmt.Expression.(*ast.PrefixExpression)
 		if !ok {
-			t.Fatalf("stmt is not ast.PrefixExpression. got=%T", stmt.Expression)
+			t.Fatalf("PrefixExpressionへの変換失敗！ got=%T", stmt.Expression)
 		}
-		if prefixExp.Operator != tt.operator {
-			t.Fatalf("pex.Operator is not '%s'. got=%s", tt.operator, prefixExp.Operator)
+		if expression.Operator != tt.operator {
+			t.Fatalf("expression.Operator is not %s. got=%s", tt.operator, expression.Operator)
 		}
-		if !testIntegerContent(t, prefixExp.Right, tt.integerValue) {
+		if !testContentExpression(t, expression.Right, tt.value) {
 			return
 		}
 	}
@@ -239,9 +235,9 @@ func TestParsingPrefixExpressions(t *testing.T) {
 func TestParsingInfixExpressions(t *testing.T) {
 	infixTests := []struct {
 		input      string
-		leftValue  int64
+		leftValue  interface{}
 		operator   string
-		rightValue int64
+		rightValue interface{}
 	}{
 		{"5 + 5;", 5, "+", 5},
 		{"5 - 5;", 5, "-", 5},
@@ -251,6 +247,9 @@ func TestParsingInfixExpressions(t *testing.T) {
 		{"5 < 5;", 5, "<", 5},
 		{"5 == 5;", 5, "==", 5},
 		{"5 != 5;", 5, "!=", 5},
+		{"true == true", true, "==", true},
+		{"true != false", true, "!=", false},
+		{"false == false", false, "==", false},
 	}
 
 	for _, tt := range infixTests {
@@ -268,20 +267,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 			t.Fatalf("program.StatementArray[0] is not ast.ExpressionStatement. got=%T", program.StatementArray[0])
 		}
 
-		expression, ok := stmt.Expression.(*ast.InfixExpression)
-		if !ok {
-			t.Fatalf("expression is not ast.InfixExpression. got=%T", stmt.Expression)
-		}
-
-		if !testIntegerContent(t, expression.Left, tt.leftValue) {
-			return
-		}
-
-		if expression.Operator != tt.operator {
-			t.Fatalf("expression.Operator is not '%s'. got=%s", tt.operator, expression.Operator)
-		}
-
-		if !testIntegerContent(t, expression.Right, tt.rightValue) {
+		if !testInfixExpression(t, stmt.Expression, tt.leftValue, tt.operator, tt.rightValue) {
 			return
 		}
 
@@ -300,6 +286,22 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 		{
 			"!-a",
 			"(!(-a))",
+		},
+		{
+			"true",
+			"true",
+		},
+		{
+			"false",
+			"false",
+		},
+		{
+			"3 > 5 == false",
+			"((3 > 5) == false)",
+		},
+		{
+			"3 < 5 == true",
+			"((3 < 5) == true)",
 		},
 		// {
 		// 	"a + b + c",
@@ -444,6 +446,8 @@ func testContentExpression(t *testing.T, expression ast.Expression, expected int
 		return testIntegerContent(t, expression, v)
 	case string:
 		return testIdentifier(t, expression, v)
+	case bool:
+		return testBooleanContent(t, expression, v)
 	}
 
 	t.Errorf("type of exp not handled. got=%T", expression)
@@ -511,4 +515,24 @@ func TestBooleanExpression(t *testing.T) {
 			t.Errorf("思ったやつじゃない%tが欲しいが got=%t", tt.expectBoolean, boolean.BoolValue)
 		}
 	}
+}
+
+func testBooleanContent(t *testing.T, expression ast.Expression, expectValue bool) bool {
+	boolean, ok := expression.(*ast.Boolean)
+	if !ok {
+		t.Errorf("expression not *ast.Boolean. got=%T", expression)
+		return false
+	}
+
+	if boolean.BoolValue != expectValue {
+		t.Errorf("boolean.BoolValue not %t. got=%t", expectValue, boolean.BoolValue)
+		return false
+	}
+
+	if boolean.GetTokenContent() != fmt.Sprintf("%t", expectValue) {
+		t.Errorf("boolean.GetTokenContent not %t. got=%s", expectValue, boolean.GetTokenContent())
+		return false
+	}
+
+	return true
 }
