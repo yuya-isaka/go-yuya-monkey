@@ -391,3 +391,41 @@ func testIdentifier(t *testing.T, expression ast.Expression, expectValue string)
 
 	return true
 }
+
+func testContentExpression(t *testing.T, expression ast.Expression, expected interface{}) bool {
+	switch v := expected.(type) {
+	case int:
+		return testIntegerContent(t, expression, int64(v))
+	case int64:
+		return testIntegerContent(t, expression, v)
+	case string:
+		return testIdentifier(t, expression, v)
+	}
+
+	t.Errorf("type of exp not handled. got=%T", expression)
+	return false
+}
+
+// テスト、式、左辺、オペレータ、右辺
+func testInfixExpression(t *testing.T, expression ast.Expression, left interface{}, operator string, right interface{}) bool {
+	opExp, ok := expression.(*ast.InfixExpression)
+	if !ok {
+		t.Errorf("expression is not ast.InfixExpression. got=%T(%s)", expression, expression)
+		return false
+	}
+
+	if !testContentExpression(t, opExp.Left, left) {
+		return false
+	}
+
+	if opExp.Operator != operator {
+		t.Errorf("expression.Operator is not '%s'. got=%q", operator, opExp.Operator)
+		return false
+	}
+
+	if !testContentExpression(t, opExp.Right, right) {
+		return false
+	}
+
+	return true
+}
