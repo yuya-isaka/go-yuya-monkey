@@ -21,7 +21,7 @@ type Expression interface {
 	expressionNode()
 }
 
-//--------------------
+// ---------------------------------
 
 type Program struct {
 	StatementArray []Statement
@@ -73,6 +73,8 @@ func (ls LetStatement) String() string {
 	return out.String()
 }
 
+// ---------------------------------
+
 type Identifier struct {
 	Token      token.Token
 	IdentValue string
@@ -85,6 +87,8 @@ func (i Identifier) GetTokenContent() string {
 func (i Identifier) String() string {
 	return i.IdentValue
 }
+
+// ---------------------------------
 
 type ReturnStatement struct {
 	Token       token.Token
@@ -109,6 +113,8 @@ func (rs ReturnStatement) String() string {
 	return out.String()
 }
 
+// ---------------------------------
+
 type ExpressionStatement struct {
 	Token      token.Token
 	Expression Expression
@@ -125,6 +131,8 @@ func (es ExpressionStatement) String() string {
 	return ""
 }
 
+// ---------------------------------
+
 type Integer struct {
 	Token        token.Token
 	IntegerValue int64
@@ -137,6 +145,8 @@ func (i Integer) GetTokenContent() string {
 func (i Integer) String() string {
 	return i.Token.Content
 }
+
+// ---------------------------------
 
 type PrefixExpression struct {
 	Token    token.Token
@@ -157,6 +167,8 @@ func (p PrefixExpression) String() string {
 
 	return out.String()
 }
+
+// ---------------------------------
 
 type InfixExpression struct {
 	Token    token.Token

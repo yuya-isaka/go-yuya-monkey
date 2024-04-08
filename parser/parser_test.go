@@ -44,31 +44,6 @@ let foobar = 838383;
 	}
 }
 
-func testLetStatementIs(t *testing.T, s ast.Statement, name string) bool {
-	if s.GetTokenContent() != "let" {
-		t.Errorf("s.TokenContent not 'let'. got=%q", s.GetTokenContent())
-		return false
-	}
-
-	letStmt, ok := s.(*ast.LetStatement)
-	if !ok {
-		t.Errorf("s not *ast.LetStatement. got=%T", s)
-		return false
-	}
-
-	if letStmt.IdentName.IdentValue != name {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", name, letStmt.IdentName.IdentValue)
-		return false
-	}
-
-	if letStmt.IdentName.GetTokenContent() != name {
-		t.Errorf("letStmt.Name.TokenContent() not '%s'. got=%s", name, letStmt.IdentName.GetTokenContent())
-		return false
-	}
-
-	return true
-}
-
 //----------------------------------
 
 func TestReturnStatements(t *testing.T) {
@@ -99,43 +74,6 @@ return 993322;
 		}
 	}
 }
-
-//----------------------------------
-
-func checkParserErrors(t *testing.T, p *Parser) {
-	errors := p.Errors()
-	if len(errors) == 0 {
-		return
-	}
-
-	t.Errorf("parser has %d errors", len(errors))
-	for _, msg := range errors {
-		t.Errorf("parser error: %q", msg)
-	}
-	t.FailNow()
-}
-
-func testIntegerContent(t *testing.T, expression ast.Expression, integerValue int64) bool {
-	integer, ok := expression.(*ast.Integer)
-	if !ok {
-		t.Errorf("expression no *ast.Integer. got=%T", expression)
-		return false
-	}
-
-	if integer.IntegerValue != integerValue {
-		t.Errorf("integer.IntegerValue not %d, got=%d", integerValue, integer.IntegerValue)
-		return false
-	}
-
-	if integer.GetTokenContent() != fmt.Sprintf("%d", integerValue) {
-		t.Errorf("integer.GetTokenContent not %d, got=%s", integerValue, integer.GetTokenContent())
-		return false
-	}
-
-	return true
-}
-
-//----------------------------------
 
 func TestIdentifierExpressions(t *testing.T) {
 	input := "foobar;"
@@ -364,4 +302,92 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			t.Errorf("expected=%q, got=%q", tt.expected, actual)
 		}
 	}
+}
+
+// -------------------------------- ヘルパー関数
+
+// テスト、パーサー
+func checkParserErrors(t *testing.T, p *Parser) {
+	errors := p.Errors()
+	// ok
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("parser has %d errors", len(errors))
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+	t.FailNow()
+}
+
+// テスト、文、期待値
+func testLetStatementIs(t *testing.T, statement ast.Statement, expectName string) bool {
+	if statement.GetTokenContent() != "let" {
+		t.Errorf("statement.TokenContent not 'let'. got=%q", statement.GetTokenContent())
+		return false
+	}
+
+	letStmt, ok := statement.(*ast.LetStatement)
+	if !ok {
+		t.Errorf("statement not *ast.LetStatement. got=%T", statement)
+		return false
+	}
+
+	if letStmt.IdentName.IdentValue != expectName {
+		t.Errorf("letStmt.Name.Value not '%s'. got=%s", expectName, letStmt.IdentName.IdentValue)
+		return false
+	}
+
+	if letStmt.IdentName.GetTokenContent() != expectName {
+		t.Errorf("letStmt.Name.TokenContent() not '%s'. got=%s", expectName, letStmt.IdentName.GetTokenContent())
+		return false
+	}
+
+	return true
+}
+
+// 整数
+// テスト、式、期待値
+func testIntegerContent(t *testing.T, expression ast.Expression, expectValue int64) bool {
+	integer, ok := expression.(*ast.Integer)
+	if !ok {
+		t.Errorf("expression not *ast.Integer. got=%T", expression)
+		return false
+	}
+
+	if integer.IntegerValue != expectValue {
+		t.Errorf("integer.IntegerValue not %d, got=%d", expectValue, integer.IntegerValue)
+		return false
+	}
+
+	// 文字列にしてから比較しようね〜
+	if integer.GetTokenContent() != fmt.Sprintf("%d", expectValue) {
+		t.Errorf("integer.GetTokenContent not %d, got=%s", expectValue, integer.GetTokenContent())
+		return false
+	}
+
+	return true
+}
+
+// 識別子
+// テスト、式、期待値
+func testIdentifier(t *testing.T, expression ast.Expression, expectValue string) bool {
+	identifier, ok := expression.(*ast.Identifier)
+	if !ok {
+		t.Errorf("expression not *ast.Identifier. got=%T", expression)
+		return false
+	}
+
+	if identifier.IdentValue != expectValue {
+		t.Errorf("ident.IdentValue not %s. got=%s", expectValue, identifier.IdentValue)
+		return false
+	}
+
+	if identifier.GetTokenContent() != expectValue {
+		t.Errorf("ident.GetTokenContent not %s. got=%s", expectValue, identifier.GetTokenContent())
+		return false
+	}
+
+	return true
 }
