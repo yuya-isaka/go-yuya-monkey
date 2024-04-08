@@ -161,6 +161,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 
+	// prefixは左結合がめちゃくちゃ強いのか (右にあるものの方が優先度が高い)
+	// ってのを最初にprefixを処理するという展開にすることで、自然に表現している
+	// 右にあるものの方が優先度が高いっていう、位置による優先度は、こんな感じで最初に処理するようにすれば、再帰的に必ず右にあるやつから処理されるのか。。。面白いな
 	leftExp := prefix()
 
 	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
