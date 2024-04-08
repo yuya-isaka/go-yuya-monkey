@@ -477,3 +477,38 @@ func testInfixExpression(t *testing.T, expression ast.Expression, left interface
 
 	return true
 }
+
+func TestBooleanExpression(t *testing.T) {
+	tests := []struct {
+		input         string
+		expectBoolean bool
+	}{
+		{"true;", true},
+		{"false;", false},
+	}
+
+	for _, tt := range tests {
+		l := lexer.NewLexer(tt.input)
+		p := NewParser(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.StatementArray) != 1 {
+			t.Fatalf("長さ違うよ got=%d", len(program.StatementArray))
+		}
+
+		stmt, ok := program.StatementArray[0].(*ast.ExpressionStatement)
+		if !ok {
+			t.Fatalf("入ってるのが式文じゃない got=%T", program.StatementArray[0])
+		}
+
+		boolean, ok := stmt.Expression.(*ast.Boolean)
+		if !ok {
+			t.Fatalf("式がブーリアンじゃないな got=%T", stmt.Expression)
+		}
+
+		if boolean.BoolValue != tt.expectBoolean {
+			t.Errorf("思ったやつじゃない%tが欲しいが got=%t", tt.expectBoolean, boolean.BoolValue)
+		}
+	}
+}

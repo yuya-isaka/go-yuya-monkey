@@ -192,3 +192,13 @@ func (i InfixExpression) String() string {
 
 	return out.String()
 }
+
+// 真偽値のAST表現
+type Boolean struct {
+	Token     token.Token
+	BoolValue bool
+}
+
+func (b *Boolean) expressionNode()         {}
+func (b *Boolean) GetTokenContent() string { return b.Token.Content }
+func (b *Boolean) String() string          { return b.Token.Content }
