@@ -48,9 +48,9 @@ func (p *Program) String() string {
 //--------------------
 
 type LetStatement struct {
-	Token     token.Token // let
-	IdentName *Identifier
-	LetValue  Expression
+	Token         token.Token // let
+	LetName       *Identifier
+	LetExpression Expression
 }
 
 func (ls *LetStatement) statementNode() {}
@@ -61,11 +61,11 @@ func (ls LetStatement) String() string {
 	var out bytes.Buffer
 
 	out.WriteString(ls.GetTokenContent() + " ")
-	out.WriteString(ls.IdentName.String())
+	out.WriteString(ls.LetName.String())
 	out.WriteString(" = ")
 
-	if ls.LetValue != nil {
-		out.WriteString(ls.LetValue.String())
+	if ls.LetExpression != nil {
+		out.WriteString(ls.LetExpression.String())
 	}
 
 	out.WriteString(";")

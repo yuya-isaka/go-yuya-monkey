@@ -110,7 +110,7 @@ func (p *Parser) parseLetStatement() *ast.LetStatement {
 		return nil
 	}
 
-	letstmt.IdentName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
+	letstmt.LetName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
 
 	if !p.expectTokenIs(token.ASSIGN) {
 		return nil

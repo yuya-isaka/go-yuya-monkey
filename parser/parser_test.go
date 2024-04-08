@@ -9,6 +9,58 @@ import (
 	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
+// テスト、パーサー
+func checkParserErrors(t *testing.T, p *Parser) {
+	errors := p.Errors()
+	// ok
+	if len(errors) == 0 {
+		return
+	}
+
+	t.Errorf("parser has %d errors", len(errors))
+	for _, msg := range errors {
+		t.Errorf("parser error: %q", msg)
+	}
+	t.FailNow()
+}
+
+// func TestLetStatements(t *testing.T) {
+// 	tests := []struct {
+// 		input       string
+// 		expectIdent string
+// 		expectValue interface{}
+// 	}{
+// 		{"let x = 5;", "x", 5},
+// 		{"let y = true;", "y", true},
+// 		{"let foobar = y;", "foobar", "y"},
+// 	}
+
+// 	for _, tt := range tests {
+// 		l := lexer.NewLexer(tt.input)
+// 		p := NewParser(l)
+// 		program := p.ParseProgram()
+// 		checkParserErrors(t, p)
+
+// 		// 1. 長さチェック
+// 		if len(program.StatementArray) != 1 {
+// 			t.Fatalf("program.Statements does not contain 1 statements. got=%d", len(program.StatementArray))
+// 		}
+
+// 		// 2. 文自体チェック
+// 		stmt := program.StatementArray[0]
+// 		if !testLetStatementIs(t, stmt, tt.expectIdent) {
+// 			return
+// 		}
+
+// 		// 3. 中身の式チェック
+// 		expression := stmt.(*ast.LetStatement).LetExpression
+// 		if !testContentExpression(t, expression, tt.expectValue) {
+// 			return
+// 		}
+// 	}
+
+// }
+
 func TestLetStatements(t *testing.T) {
 	input := `
 let x = 5;
@@ -306,21 +358,6 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 
 // -------------------------------- ヘルパー関数
 
-// テスト、パーサー
-func checkParserErrors(t *testing.T, p *Parser) {
-	errors := p.Errors()
-	// ok
-	if len(errors) == 0 {
-		return
-	}
-
-	t.Errorf("parser has %d errors", len(errors))
-	for _, msg := range errors {
-		t.Errorf("parser error: %q", msg)
-	}
-	t.FailNow()
-}
-
 // テスト、文、期待値
 func testLetStatementIs(t *testing.T, statement ast.Statement, expectName string) bool {
 	if statement.GetTokenContent() != "let" {
@@ -334,13 +371,13 @@ func testLetStatementIs(t *testing.T, statement ast.Statement, expectName string
 		return false
 	}
 
-	if letStmt.IdentName.IdentValue != expectName {
-		t.Errorf("letStmt.Name.Value not '%s'. got=%s", expectName, letStmt.IdentName.IdentValue)
+	if letStmt.LetName.IdentValue != expectName {
+		t.Errorf("letStmt.Name.Value not '%s'. got=%s", expectName, letStmt.LetName.IdentValue)
 		return false
 	}
 
-	if letStmt.IdentName.GetTokenContent() != expectName {
-		t.Errorf("letStmt.Name.TokenContent() not '%s'. got=%s", expectName, letStmt.IdentName.GetTokenContent())
+	if letStmt.LetName.GetTokenContent() != expectName {
+		t.Errorf("letStmt.Name.TokenContent() not '%s'. got=%s", expectName, letStmt.LetName.GetTokenContent())
 		return false
 	}
 
@@ -350,17 +387,20 @@ func testLetStatementIs(t *testing.T, statement ast.Statement, expectName string
 // 整数
 // テスト、式、期待値
 func testIntegerContent(t *testing.T, expression ast.Expression, expectValue int64) bool {
+	// 1. 型変換
 	integer, ok := expression.(*ast.Integer)
 	if !ok {
 		t.Errorf("expression not *ast.Integer. got=%T", expression)
 		return false
 	}
 
+	// 2. 期待した値を持っているか
 	if integer.IntegerValue != expectValue {
 		t.Errorf("integer.IntegerValue not %d, got=%d", expectValue, integer.IntegerValue)
 		return false
 	}
 
+	// 3. トークン確認
 	// 文字列にしてから比較しようね〜
 	if integer.GetTokenContent() != fmt.Sprintf("%d", expectValue) {
 		t.Errorf("integer.GetTokenContent not %d, got=%s", expectValue, integer.GetTokenContent())
@@ -373,17 +413,21 @@ func testIntegerContent(t *testing.T, expression ast.Expression, expectValue int
 // 識別子
 // テスト、式、期待値
 func testIdentifier(t *testing.T, expression ast.Expression, expectValue string) bool {
+
+	// 1. 型変換
 	identifier, ok := expression.(*ast.Identifier)
 	if !ok {
 		t.Errorf("expression not *ast.Identifier. got=%T", expression)
 		return false
 	}
 
+	// 2. 期待した値を持っているか
 	if identifier.IdentValue != expectValue {
 		t.Errorf("ident.IdentValue not %s. got=%s", expectValue, identifier.IdentValue)
 		return false
 	}
 
+	// 3. トークン確認
 	if identifier.GetTokenContent() != expectValue {
 		t.Errorf("ident.GetTokenContent not %s. got=%s", expectValue, identifier.GetTokenContent())
 		return false
@@ -408,22 +452,26 @@ func testContentExpression(t *testing.T, expression ast.Expression, expected int
 
 // テスト、式、左辺、オペレータ、右辺
 func testInfixExpression(t *testing.T, expression ast.Expression, left interface{}, operator string, right interface{}) bool {
-	opExp, ok := expression.(*ast.InfixExpression)
+
+	// 1. 型変換
+	infixExpression, ok := expression.(*ast.InfixExpression)
 	if !ok {
 		t.Errorf("expression is not ast.InfixExpression. got=%T(%s)", expression, expression)
 		return false
 	}
 
-	if !testContentExpression(t, opExp.Left, left) {
+	// 左辺チェック
+	if !testContentExpression(t, infixExpression.Left, left) {
 		return false
 	}
 
-	if opExp.Operator != operator {
-		t.Errorf("expression.Operator is not '%s'. got=%q", operator, opExp.Operator)
+	// 文字列チェック
+	if infixExpression.Operator != operator {
+		t.Errorf("expression.Operator is not '%s'. got=%q", operator, infixExpression.Operator)
 		return false
 	}
 
-	if !testContentExpression(t, opExp.Right, right) {
+	if !testContentExpression(t, infixExpression.Right, right) {
 		return false
 	}
 
