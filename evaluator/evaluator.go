@@ -46,11 +46,20 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.PrefixNode:
 		right := Eval(node.Right)
+		if isErrorObj(right) {
+			return right
+		}
 		return evalPrefix(node.Operator, right)
 
 	case *ast.InfixNode:
 		left := Eval(node.Left)
+		if isErrorObj(left) {
+			return left
+		}
 		right := Eval(node.Right)
+		if isErrorObj(right) {
+			return right
+		}
 
 		switch {
 
@@ -117,6 +126,9 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.IfNode:
 		condition := Eval(node.Condition)
+		if isErrorObj(condition) {
+			return condition
+		}
 
 		if isTruthy(condition) {
 			return Eval(node.Consequence)
@@ -128,6 +140,9 @@ func Eval(node ast.Node) object.Object {
 
 	case *ast.ReturnNode:
 		result := Eval(node.Value)
+		if isErrorObj(result) {
+			return result
+		}
 		return &object.ReturnObj{Value: result}
 
 	}
@@ -159,6 +174,13 @@ func isTruthy(obj object.Object) bool {
 
 func newErrorObj(format string, a ...interface{}) *object.ErrorObj {
 	return &object.ErrorObj{Value: fmt.Sprintf(format, a...)}
+}
+
+func isErrorObj(obj object.Object) bool {
+	if obj != nil {
+		return obj.Type() == object.ERROR
+	}
+	return false
 }
 
 func evalPrefix(operator string, right object.Object) object.Object {
