@@ -161,6 +161,47 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 		return &object.ReturnObj{Value: obj}
 
+	case *ast.FunctionNode:
+		return &object.FunctionObj{Parameters: node.Parameters, Body: node.Body, Env: env}
+
+	case *ast.CallNode:
+		function := Eval(node.Function, env)
+		if isErrorObj(function) {
+			return function
+		}
+
+		var args []object.Object
+		// 引数を左から右に評価
+		for _, e := range node.Arguments {
+			obj := Eval(e, env)
+			if isErrorObj(obj) {
+				return obj
+			}
+			args = append(args, obj)
+		}
+
+		fn, ok := function.(*object.FunctionObj)
+		if !ok {
+			return newErrorObj("not a function: %s", fn.Type())
+		}
+
+		// パラメータを『拡張した環境』に束縛
+		extendedEnv := object.NewEnclosedEnvironment(fn.Env)
+		for paramIdx, param := range fn.Parameters {
+			env.Set(param.Value, args[paramIdx])
+		}
+
+		// ボディと『拡張した環境』で評価
+		result := Eval(fn.Body, extendedEnv)
+		// もし、結果がReturnオブジェクトだったらそのまま返却
+		// その関数からのリターンだから、これはBlockの時みたいに上に上げなくていい
+		// むしろこのif文がないと、そのままReturnが浮上して処理が止まってしまう
+		if returnValue, ok := result.(*object.ReturnObj); ok {
+			return returnValue.Value
+		}
+
+		return result
+
 	}
 
 	return nil

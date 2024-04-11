@@ -1,13 +1,20 @@
 package object
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"strings"
+
+	"github.com/yuya-isaka/go-yuya-monkey/ast"
+)
 
 const (
-	NULL   = "NULL"
-	INT    = "INT"
-	BOOL   = "BOOL"
-	RETURN = "RETURN"
-	ERROR  = "ERROR"
+	NULL     = "NULL"
+	INT      = "INT"
+	BOOL     = "BOOL"
+	RETURN   = "RETURN"
+	ERROR    = "ERROR"
+	FUNCTION = "FUNCTION"
 )
 
 type ObjectType string
@@ -65,3 +72,29 @@ func (e ErrorObj) Inspect() string  { return "ERROR: " + e.Value }
 // 変数の内部表現はいらないんやなーー
 
 // ---------------------------------
+
+// Callの時に評価したいから、そのままノードを持っておかないといけない
+type FunctionObj struct {
+	Parameters []*ast.IdentNode
+	Body       *ast.BlockNode
+	Env        *Environment // クロージャだ
+}
+
+func (f FunctionObj) Type() ObjectType { return FUNCTION }
+func (f FunctionObj) Inspect() string {
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, p := range f.Parameters {
+		params = append(params, p.String())
+	}
+
+	out.WriteString("fn")
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") {\n")
+	out.WriteString(f.Body.String())
+	out.WriteString("\n")
+
+	return out.String()
+}

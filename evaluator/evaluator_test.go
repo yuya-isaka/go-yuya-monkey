@@ -128,6 +128,36 @@ func TestReturn(t *testing.T) {
 			}
 			`, 10,
 		},
+		{
+			`
+			let f = fn(x) {
+				return x;
+				x + 10;
+			};
+			f(10);
+			`, 10,
+		},
+		{
+			`
+			let f = fn(x) {
+				let result = x + 10;
+				return result;
+				return 10;
+			};
+			f(10);
+			`, 20,
+		},
+		{
+			`
+			let f = fn(x) {
+				let result = x + 10;
+				return result;
+				return 10;
+			};
+			f(10);
+			return 30;
+			`, 30,
+		},
 	}
 
 	for _, tt := range tests {
@@ -205,6 +235,47 @@ func TestLet(t *testing.T) {
 		{"let a = 5 * 5; a;", 25},
 		{"let a = 5; let b = a; b;", 5},
 		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+	}
+
+	for _, tt := range tests {
+		testIntObj(t, testEval(tt.input), tt.expect)
+	}
+}
+
+func TestFunction(t *testing.T) {
+	input := "fn(x) { x + 2 };"
+	obj := testEval(input)
+
+	fn, ok := obj.(*object.FunctionObj)
+	if !ok {
+		t.Fatalf("object is not Function. got=%T (%+v)", obj, obj)
+	}
+
+	if len(fn.Parameters) != 1 {
+		t.Fatalf("function has wrong parameters. Parameters=%+v", fn.Parameters)
+	}
+
+	if fn.Parameters[0].String() != "x" {
+		t.Fatalf("parameter is not 'x'. got=%q", fn.Parameters[0])
+	}
+
+	expectBody := "(x + 2)"
+	if fn.Body.String() != expectBody {
+		t.Fatalf("body is not %q. got=%q", expectBody, fn.Body.String())
+	}
+}
+
+func TestCall(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect int64
+	}{
+		{"let ident = fn(x) { x; }; ident(5);", 5},
+		{"let ident = fn(x) { return x; }; ident(5);", 5},
+		{"let double = fn(x) { x * 2; }; double(5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5, 5);", 10},
+		{"let add = fn(x, y) { x + y; }; add(5 + 5, add(5, 5));", 20},
+		{"fn(x) { x; }(5)", 5},
 	}
 
 	for _, tt := range tests {
