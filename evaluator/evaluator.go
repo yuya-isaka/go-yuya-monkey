@@ -15,7 +15,20 @@ var (
 func Eval(node ast.Node) object.Object {
 	switch node := node.(type) {
 	case *ast.ProgramNode:
-		return evalStatements(node.Statements)
+		var result object.Object
+
+		for _, statement := range node.Statements {
+			result = Eval(statement)
+
+			// 中身を取り出すには型アサーション必要
+			if returnValue, ok := result.(*object.ReturnObj); ok {
+				return returnValue.Value
+			}
+		}
+
+		// 最後に評価した結果を返す
+		// Returnあったらそれを事前に返している
+		return result
 
 	case *ast.EsNode:
 		return Eval(node.Value)
@@ -78,7 +91,18 @@ func Eval(node ast.Node) object.Object {
 		}
 
 	case *ast.BlockNode:
-		return evalStatements(node.Statements)
+		var result object.Object
+
+		for _, statement := range node.Statements {
+			result = Eval(statement)
+
+			if result != nil && result.Type() == object.RETURN {
+				// そのまま上に上げる
+				return result
+			}
+		}
+
+		return result
 
 	case *ast.IfNode:
 		condition := Eval(node.Condition)
@@ -98,22 +122,6 @@ func Eval(node ast.Node) object.Object {
 	}
 
 	return nil
-}
-
-func evalStatements(stmts []ast.Statement) object.Object {
-	var result object.Object
-
-	for _, statement := range stmts {
-		result = Eval(statement)
-
-		if returnValue, ok := result.(*object.ReturnObj); ok {
-			return returnValue.Value
-		}
-	}
-
-	// 最後に評価した結果を返す
-	// Returnあったらそれを事前に返している
-	return result
 }
 
 func changeBoolObj(value bool) object.Object {
