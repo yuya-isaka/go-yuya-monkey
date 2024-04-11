@@ -4,9 +4,10 @@ import "fmt"
 
 const (
 	NULL   = "NULL"
-	INT    = "INTEGER"
-	BOOL   = "BOOLEAN"
+	INT    = "INT"
+	BOOL   = "BOOL"
 	RETURN = "RETURN"
+	ERROR  = "ERROR"
 )
 
 type ObjectType string
@@ -51,3 +52,10 @@ func (r ReturnObj) Type() ObjectType { return RETURN }
 func (r ReturnObj) Inspect() string  { return r.Value.Inspect() }
 
 // ---------------------------------
+
+type ErrorObj struct {
+	Value string
+}
+
+func (e ErrorObj) Type() ObjectType { return ERROR }
+func (e ErrorObj) Inspect() string  { return "ERROR: " + e.Value }

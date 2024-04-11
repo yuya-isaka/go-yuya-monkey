@@ -139,6 +139,63 @@ func TestReturn(t *testing.T) {
 	}
 }
 
+func TestError(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect string
+	}{
+		{
+			"5 + true;",
+			"type mismatch: INT + BOOL",
+		},
+		{
+			"5 + true; 5;",
+			"type mismatch: INT + BOOL",
+		},
+		{
+			"-true",
+			"unknown operator: -BOOL",
+		},
+		{
+			"true + false;",
+			"unknown operator: BOOL + BOOL",
+		},
+		{
+			"5; true + false; 10;",
+			"unknown operator: BOOL + BOOL",
+		},
+		{
+			"if (10 > 1) { true + false; }",
+			"unknown operator: BOOL + BOOL",
+		},
+		{
+			`
+			if (10 > 1) {
+				if (10 > 1) {
+					return true + false;
+				}
+				return 1;
+			}
+			`,
+			"unknown operator: BOOL + BOOL",
+		},
+	}
+
+	for _, tt := range tests {
+		obj := testEval(tt.input)
+
+		errObj, ok := obj.(*object.ErrorObj)
+		if !ok {
+			t.Errorf("no error object returned. got=%T (%+v)", obj, obj)
+			continue
+		}
+
+		if errObj.Value != tt.expect {
+			t.Errorf("wrong error message. expect=%q, got=%q", tt.expect, errObj.Value)
+		}
+	}
+}
+
 // --------------------------------
 
 func testEval(input string) object.Object {

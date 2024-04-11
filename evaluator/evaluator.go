@@ -1,6 +1,8 @@
 package evaluator
 
 import (
+	"fmt"
+
 	"github.com/yuya-isaka/go-yuya-monkey/ast"
 	"github.com/yuya-isaka/go-yuya-monkey/object"
 )
@@ -21,8 +23,11 @@ func Eval(node ast.Node) object.Object {
 			result = Eval(statement)
 
 			// 中身を取り出すには型アサーション必要
-			if returnValue, ok := result.(*object.ReturnObj); ok {
-				return returnValue.Value
+			switch result := result.(type) {
+			case *object.ReturnObj:
+				return result.Value
+			case *object.ErrorObj:
+				return result
 			}
 		}
 
@@ -74,7 +79,7 @@ func Eval(node ast.Node) object.Object {
 			case "!=":
 				return changeBoolObj(leftVal != rightVal)
 			default:
-				return NULL
+				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 			}
 
 		// オブジェクトを指し示すのにポインタ（参照）のみを使っていて、ポインタを比較すればいい
@@ -86,8 +91,11 @@ func Eval(node ast.Node) object.Object {
 		case node.Operator == "!=":
 			return changeBoolObj(left != right)
 
+		case left.Type() != right.Type():
+			return newErrorObj("type mismatch: %s %s %s", left.Type(), node.Operator, right.Type())
+
 		default:
-			return NULL
+			return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 		}
 
 	case *ast.BlockNode:
@@ -96,9 +104,12 @@ func Eval(node ast.Node) object.Object {
 		for _, statement := range node.Statements {
 			result = Eval(statement)
 
-			if result != nil && result.Type() == object.RETURN {
-				// そのまま上に上げる
-				return result
+			if result != nil {
+				rt := result.Type()
+				if rt == object.RETURN || rt == object.ERROR {
+					// そのまま上に上げる
+					return result
+				}
 			}
 		}
 
@@ -146,6 +157,10 @@ func isTruthy(obj object.Object) bool {
 	}
 }
 
+func newErrorObj(format string, a ...interface{}) *object.ErrorObj {
+	return &object.ErrorObj{Value: fmt.Sprintf(format, a...)}
+}
+
 func evalPrefix(operator string, right object.Object) object.Object {
 	switch operator {
 	case "!":
@@ -162,14 +177,14 @@ func evalPrefix(operator string, right object.Object) object.Object {
 
 	case "-":
 		if right.Type() != object.INT {
-			return NULL
+			return newErrorObj("unknown operator: -%s", right.Type())
 		}
 
 		value := right.(*object.IntObj).Value
 		return &object.IntObj{Value: -value}
 
 	default:
-		return NULL
+		return newErrorObj("unknown operator: %s%s", operator, right.Type())
 	}
 
 }
