@@ -118,9 +118,9 @@ if (5 < 10) {
 				i, tt.expectedType, tok.Type)
 		}
 
-		if tok.Content != tt.expectedContent {
+		if tok.Name != tt.expectedContent {
 			t.Fatalf("tests[%d] - Content wrong. expected=%q, got=%q",
-				i, tt.expectedContent, tok.Content)
+				i, tt.expectedContent, tok.Name)
 		}
 	}
 }

@@ -33,8 +33,8 @@ const (
 type TokenType string
 
 type Token struct {
-	Type    TokenType
-	Content string
+	Type TokenType
+	Name string
 }
 
 var keywords = map[string]TokenType{
@@ -47,9 +47,10 @@ var keywords = map[string]TokenType{
 	"false":  FALSE,
 }
 
-func LookKeywordToken(content string) TokenType {
-	if tok, ok := keywords[content]; ok {
+func LookKeyword(name string) TokenType {
+	if tok, ok := keywords[name]; ok {
 		return tok
 	}
+	// キーワードじゃなかったら変数
 	return IDENT
 }

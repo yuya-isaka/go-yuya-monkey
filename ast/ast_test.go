@@ -7,17 +7,17 @@ import (
 )
 
 func TestString(t *testing.T) {
-	program := &Program{
-		StatementArray: []Statement{
-			&LetStatement{
-				Token: token.Token{Type: token.LET, Content: "let"},
-				LetName: &Identifier{
-					Token:      token.Token{Type: token.IDENT, Content: "myVar"},
-					IdentValue: "myVar",
+	program := &ProgramNode{
+		Statements: []Statement{
+			&LetNode{
+				Token: token.Token{Type: token.LET, Name: "let"},
+				Name: &IdentNode{
+					Token: token.Token{Type: token.IDENT, Name: "myVar"},
+					Value: "myVar",
 				},
-				LetExpression: &Identifier{
-					Token:      token.Token{Type: token.IDENT, Content: "anotherVar"},
-					IdentValue: "anotherVar",
+				Value: &IdentNode{
+					Token: token.Token{Type: token.IDENT, Name: "anotherVar"},
+					Value: "anotherVar",
 				},
 			},
 		},

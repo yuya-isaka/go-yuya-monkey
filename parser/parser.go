@@ -29,43 +29,22 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
+	token.LPAREN:   CALL,
 }
 
 type Parser struct {
-	l *lexer.Lexer
-
-	curToken  token.Token
-	peekToken token.Token
-
+	lex    *lexer.Lexer
 	errors []string
 
-	prefixParseFnMap map[token.TokenType]prefixParseFn
-	infixParseFnMap  map[token.TokenType]infixParseFn
+	curT  token.Token
+	peekT token.Token
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
 	p := &Parser{
-		l:      l,
+		lex:    l,
 		errors: []string{},
 	}
-
-	p.prefixParseFnMap = make(map[token.TokenType]prefixParseFn)
-	p.registerPrefix(token.IDENT, p.parseIdentifier)
-	p.registerPrefix(token.INT, p.parseIntegerContent)
-	p.registerPrefix(token.BANG, p.parsePrefixExpression)  // 進める
-	p.registerPrefix(token.MINUS, p.parsePrefixExpression) // 進める
-	p.registerPrefix(token.TRUE, p.parseBoolean)
-	p.registerPrefix(token.FALSE, p.parseBoolean)
-
-	p.infixParseFnMap = make(map[token.TokenType]infixParseFn)
-	p.registerInfix(token.PLUS, p.parseInfixExpression)     // 進める
-	p.registerInfix(token.MINUS, p.parseInfixExpression)    // 進める
-	p.registerInfix(token.ASTERISK, p.parseInfixExpression) // 進める
-	p.registerInfix(token.SLASH, p.parseInfixExpression)    // 進める
-	p.registerInfix(token.EQ, p.parseInfixExpression)       // 進める
-	p.registerInfix(token.NOT_EQ, p.parseInfixExpression)   // 進める
-	p.registerInfix(token.LT, p.parseInfixExpression)       // 進める
-	p.registerInfix(token.GT, p.parseInfixExpression)       // 進める
 
 	p.nextToken()
 	p.nextToken()
@@ -73,138 +52,206 @@ func NewParser(l *lexer.Lexer) *Parser {
 	return p
 }
 
-func (p *Parser) ParseProgram() *ast.Program {
-	defer untrace(trace("ParseProgram"))
+func (p *Parser) ParseProgram() *ast.ProgramNode {
+	// defer untrace(trace("ParseProgram"))
 
-	program := &ast.Program{}
-	program.StatementArray = []ast.Statement{}
+	// 作る
+	node := &ast.ProgramNode{
+		Statements: []ast.Statement{},
+	}
 
-	for !p.curTokenIs(token.EOF) {
+	// 文をトークンの最後まで
+	for !p.curToken(token.EOF) {
 		stmt := p.parseStatement()
-		if stmt != nil {
-			program.StatementArray = append(program.StatementArray, stmt)
+		if stmt == nil {
+			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
+			p.errors = append(p.errors, msg)
 		}
+		node.Statements = append(node.Statements, stmt)
+
+		// セミコロンで返ってきているはず
+		// 式文なら文の末尾
 		p.nextToken()
 	}
 
-	return program
+	return node
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	defer untrace(trace("parseStatement"))
+	// defer untrace(trace("parseStatement"))
 
-	switch p.curToken.Type {
+	switch p.curT.Type {
 	case token.LET:
-		return p.parseLetStatement()
+		return p.parseLet()
+
 	case token.RETURN:
-		return p.parseReturnStatement()
+		return p.parseReturn()
+
 	default:
-		return p.parseExpressionStatement()
+		return p.parseES() // 式文
 	}
 }
 
-func (p *Parser) parseLetStatement() *ast.LetStatement {
-	defer untrace(trace("parseLetStatement"))
+func (p *Parser) parseLet() ast.Statement {
+	// defer untrace(trace("parseLet"))
 
-	letstmt := &ast.LetStatement{Token: p.curToken}
+	node := &ast.LetNode{Token: p.curT}
 
-	if !p.expectTokenIs(token.IDENT) {
+	// let a = 3;
+	//  ↑
+	if !p.expectPeekToken(token.IDENT) {
 		return nil
 	}
 
-	letstmt.LetName = &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
+	node.Name = &ast.IdentNode{Token: p.curT, Value: p.curT.Name}
 
-	if !p.expectTokenIs(token.ASSIGN) {
+	// let a = 3;
+	//     ↑
+	if !p.expectPeekToken(token.ASSIGN) {
 		return nil
 	}
 
-	// TODO
-	for !p.curTokenIs(token.SEMICOLON) {
+	// let a = 3;
+	//       ↑
+	p.nextToken()
+
+	// let a = 3;
+	//         ↑
+	node.Value = p.parseExpression(LOWEST)
+
+	// どちらか
+	// let a = 3;
+	//         ↑
+	// or
+	// let a = 3;
+	//          ↑
+	if !p.curToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
-	return letstmt
+	if !p.curToken(token.SEMICOLON) {
+		msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	// セミコロンで返る
+	return node
 }
 
-func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
-	defer untrace(trace("parseReturnStatement"))
+func (p *Parser) parseReturn() ast.Statement {
+	// defer untrace(trace("parseReturn"))
 
-	returnstmt := &ast.ReturnStatement{Token: p.curToken}
+	node := &ast.ReturnNode{Token: p.curT}
 
 	p.nextToken()
 
-	// TODO
-	for !p.curTokenIs(token.SEMICOLON) {
+	node.Value = p.parseExpression(LOWEST)
+
+	if !p.curToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
-	return returnstmt
-}
-
-func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
-	defer untrace(trace("parseExpressionStatement"))
-
-	esstmt := &ast.ExpressionStatement{Token: p.curToken}
-	esstmt.Expression = p.parseExpression(LOWEST)
-	// 式文のセミコロンなしはエラーにしない。
-	if p.peekTokenIs(token.SEMICOLON) {
-		p.nextToken()
-	}
-
-	return esstmt
-}
-
-func (p *Parser) parseExpression(precedence int) ast.Expression {
-	defer untrace(trace("parseExpression"))
-
-	prefix := p.prefixParseFnMap[p.curToken.Type]
-	if prefix == nil {
-		p.noPrefixParseFnError(p.curToken.Type)
+	if !p.curToken(token.SEMICOLON) {
+		msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
+		p.errors = append(p.errors, msg)
 		return nil
 	}
 
-	// prefixは左結合がめちゃくちゃ強いのか (右にあるものの方が優先度が高い)
-	// ってのを最初にprefixを処理するという展開にすることで、自然に表現している
-	// 右にあるものの方が優先度が高いっていう、位置による優先度は、こんな感じで最初に処理するようにすれば、再帰的に必ず右にあるやつから処理されるのか。。。面白いな
-	leftExp := prefix()
+	// セミコロンで返る
+	return node
+}
 
-	for !p.peekTokenIs(token.SEMICOLON) && precedence < p.peekPrecedence() {
-		infix := p.infixParseFnMap[p.peekToken.Type]
-		if infix == nil {
-			return leftExp
-		}
+func (p *Parser) parseES() ast.Statement {
+	// defer untrace(trace("parseES"))
 
-		// 1 +    2 +
+	node := &ast.EsNode{Token: p.curT}
+	node.Value = p.parseExpression(LOWEST)
+
+	// 式文のセミコロンなしOK
+	if p.peekToken(token.SEMICOLON) {
 		p.nextToken()
-		// + 2    + 3
-		leftExp = infix(leftExp)
-		// 2 +    3 ;
 	}
 
-	return leftExp
+	// セミコロンか式文の最後で返る
+	return node
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	// defer untrace(trace("parseExpression"))
+
+	var left ast.Expression
+
+	switch p.curT.Type {
+	case token.IDENT:
+		left = p.parseIdent()
+
+	case token.INT:
+		left = p.parseInt()
+
+	case token.BANG, token.MINUS:
+		left = p.parsePrefix()
+
+	case token.TRUE, token.FALSE:
+		left = p.parseBool()
+
+	case token.LPAREN:
+		left = p.parseGroup()
+
+	case token.IF:
+		left = p.parseIf()
+
+	case token.FUNCTION:
+		left = p.parseFunction()
+
+	default:
+		msg := fmt.Sprintf("no prefix parse function for %s found", p.curT.Type)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+
+	for !p.peekToken(token.SEMICOLON) && precedence < p.peekPrecedence() {
+		switch p.peekT.Type {
+		case token.EQ, token.NOT_EQ, token.LT, token.GT, token.PLUS, token.MINUS, token.ASTERISK, token.SLASH:
+			p.nextToken()
+			left = p.parseInfix(left)
+
+		case token.LPAREN:
+			p.nextToken()
+			left = p.parseCall(left)
+
+		default:
+			msg := fmt.Sprintf("ここにくるのはなんだ %q", p.peekT.Type)
+			p.errors = append(p.errors, msg)
+			return nil
+		}
+	}
+
+	return left
 }
 
 //--------------------
 
 func (p *Parser) nextToken() {
-	p.curToken = p.peekToken
-	p.peekToken = p.l.NextToken()
+	p.curT = p.peekT
+	p.peekT = p.lex.NextToken()
 }
 
-func (p *Parser) curTokenIs(t token.TokenType) bool {
-	return p.curToken.Type == t
+func (p *Parser) curToken(t token.TokenType) bool {
+	return p.curT.Type == t
 }
 
-func (p *Parser) peekTokenIs(t token.TokenType) bool {
-	return p.peekToken.Type == t
+func (p *Parser) peekToken(t token.TokenType) bool {
+	return p.peekT.Type == t
 }
 
-func (p *Parser) expectTokenIs(t token.TokenType) bool {
-	if p.peekTokenIs(t) {
+func (p *Parser) expectPeekToken(t token.TokenType) bool {
+	if p.peekToken(t) {
 		p.nextToken()
 		return true
 	} else {
-		p.peekError(t)
+		msg := fmt.Sprintf("expected nexttoken to be %s, got %s instead", t, p.peekT.Type)
+		p.errors = append(p.errors, msg)
 		return false
 	}
 }
@@ -212,7 +259,7 @@ func (p *Parser) expectTokenIs(t token.TokenType) bool {
 //--------------------
 
 func (p *Parser) peekPrecedence() int {
-	if p, ok := precedences[p.peekToken.Type]; ok {
+	if p, ok := precedences[p.peekT.Type]; ok {
 		return p
 	}
 
@@ -220,7 +267,7 @@ func (p *Parser) peekPrecedence() int {
 }
 
 func (p *Parser) curPrecedence() int {
-	if p, ok := precedences[p.curToken.Type]; ok {
+	if p, ok := precedences[p.curT.Type]; ok {
 		return p
 	}
 
@@ -233,89 +280,226 @@ func (p *Parser) Errors() []string {
 	return p.errors
 }
 
-func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected nexttoken to be %s, got %s instead", t, p.peekToken.Type)
-	p.errors = append(p.errors, msg)
-}
-
-func (p *Parser) noPrefixParseFnError(t token.TokenType) {
-	msg := fmt.Sprintf("no prefix parse function for %s found", t)
-	p.errors = append(p.errors, msg)
-}
-
 //--------------------
 
-type (
-	prefixParseFn func() ast.Expression
-	infixParseFn  func(ast.Expression) ast.Expression
-)
+func (p *Parser) parseIdent() ast.Expression {
+	// defer untrace(trace("parseIdent"))
 
-func (p *Parser) registerPrefix(tt token.TokenType, fn prefixParseFn) {
-	p.prefixParseFnMap[tt] = fn
+	return &ast.IdentNode{Token: p.curT, Value: p.curT.Name}
 }
 
-func (p *Parser) registerInfix(tt token.TokenType, fn infixParseFn) {
-	p.infixParseFnMap[tt] = fn
-}
+func (p *Parser) parseInt() ast.Expression {
+	// defer untrace(trace("parseInt"))
 
-func (p *Parser) parseIdentifier() ast.Expression {
-	defer untrace(trace("parseIdentifier"))
-
-	return &ast.Identifier{Token: p.curToken, IdentValue: p.curToken.Content}
-}
-
-func (p *Parser) parseIntegerContent() ast.Expression {
-	defer untrace(trace("parseIntegerContent"))
-
-	integerValue, err := strconv.ParseInt(p.curToken.Content, 0, 64)
+	value, err := strconv.ParseInt(p.curT.Name, 0, 64)
 	if err != nil {
-		msg := fmt.Sprintf("could not parse %q as integer", p.curToken.Content)
+		msg := fmt.Sprintf("could not parse %q as integer", p.curT.Name)
 		p.errors = append(p.errors, msg)
 		return nil
 	}
-	return &ast.Integer{Token: p.curToken, IntegerValue: integerValue}
+
+	return &ast.IntNode{Token: p.curT, Value: value}
 }
 
-func (p *Parser) parsePrefixExpression() ast.Expression {
-	defer untrace(trace("parsePrefixExpression"))
+func (p *Parser) parsePrefix() ast.Expression {
+	// defer untrace(trace("parsePrefix"))
 
-	prefixExpression := &ast.PrefixExpression{
-		Token:    p.curToken,
-		Operator: p.curToken.Content,
+	node := &ast.PrefixNode{
+		Token:    p.curT,
+		Operator: p.curT.Name,
 	}
 
 	p.nextToken()
 
-	prefixExpression.Right = p.parseExpression(PREFIX)
+	node.Right = p.parseExpression(PREFIX)
 
-	return prefixExpression
+	return node
 }
 
-func (p *Parser) parseInfixExpression(leftExpression ast.Expression) ast.Expression {
-	defer untrace(trace("parseInfixExpression"))
+func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
+	// defer untrace(trace("parseInfix"))
 
-	infixExpression := &ast.InfixExpression{
-		Token:    p.curToken,
-		Left:     leftExpression,
-		Operator: p.curToken.Content,
+	node := &ast.InfixNode{
+		Token:    p.curT,
+		Left:     left,
+		Operator: p.curT.Name,
 	}
 
 	// ここが超大事
 	// parseExpressionを呼び出すときの、precedenceをどうするかで大きく変わってくる。
 	precedence := p.curPrecedence()
 
-	// + 2    + 3
 	p.nextToken()
-	// 2 +    3 ;
-	infixExpression.Right = p.parseExpression(precedence)
+	node.Right = p.parseExpression(precedence)
 
-	return infixExpression
+	return node
 }
 
-// 1 + 3 + 4
-// LOWEST 1 + 3
-//
+func (p *Parser) parseBool() ast.Expression {
+	// defer untrace(trace("parseBool"))
 
-func (p *Parser) parseBoolean() ast.Expression {
-	return &ast.Boolean{Token: p.curToken, BoolValue: p.curTokenIs(token.TRUE)}
+	return &ast.BoolNode{Token: p.curT, Value: p.curToken(token.TRUE)}
+}
+
+func (p *Parser) parseGroup() ast.Expression {
+	// defer untrace(trace("parseGroup"))
+
+	p.nextToken()
+
+	node := p.parseExpression(LOWEST)
+
+	if !p.expectPeekToken(token.RPAREN) {
+		return nil
+	}
+
+	return node
+}
+
+func (p *Parser) parseIf() ast.Expression {
+	// defer untrace(trace("parseIf"))
+
+	node := &ast.IfNode{Token: p.curT}
+
+	if !p.expectPeekToken(token.LPAREN) {
+		return nil
+	}
+	p.nextToken()
+
+	node.Condition = p.parseExpression(LOWEST)
+
+	if !p.expectPeekToken(token.RPAREN) {
+		return nil
+	}
+
+	if !p.expectPeekToken(token.LBRACE) {
+		return nil
+	}
+
+	node.Consequence = p.parseBlock() // 進む
+
+	// elseを省略してもOK
+	if p.peekToken(token.ELSE) {
+		p.nextToken()
+
+		if !p.expectPeekToken(token.LBRACE) {
+			return nil
+		}
+
+		node.Alternative = p.parseBlock()
+	}
+
+	return node
+}
+
+// 返る先の型が指定されているから、返り値の型はast.Statementではなく*ast.BlockNode
+func (p *Parser) parseBlock() *ast.BlockNode {
+	// defer untrace(trace("parseBlock"))
+
+	node := &ast.BlockNode{
+		Token:      p.curT,
+		Statements: []ast.Statement{},
+	}
+
+	p.nextToken()
+
+	// 文をトークンの最後まで（"}"を忘れた場合、次々に"}"が出てくるまで、トークンを勧めながら文を読もうとしてしまうのでそれを避けるために、token.EOFでも確認）
+	for !p.curToken(token.RBRACE) && !p.curToken(token.EOF) {
+		stmt := p.parseStatement()
+		if stmt == nil {
+			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
+			p.errors = append(p.errors, msg)
+		}
+
+		node.Statements = append(node.Statements, stmt)
+
+		// セミコロンで帰ってくるはず
+		// 式文なら文の末尾かも
+		p.nextToken()
+	}
+
+	return node
+}
+
+func (p *Parser) parseFunction() ast.Expression {
+	// defer untrace(trace("parseFunction"))
+
+	node := &ast.FunctionNode{Token: p.curT}
+
+	if !p.expectPeekToken(token.LPAREN) {
+		return nil
+	}
+
+	node.Parameters = p.parseParameters()
+
+	if !p.expectPeekToken(token.LBRACE) {
+		return nil
+	}
+
+	node.Body = p.parseBlock()
+
+	return node
+}
+
+// 返る先の型が指定されているから、返り値の型はast.Expressionではなく*ast.IdentNode
+func (p *Parser) parseParameters() []*ast.IdentNode {
+	// defer untrace(trace("parseParameters"))
+
+	nodes := []*ast.IdentNode{}
+
+	if p.peekToken(token.RPAREN) {
+		p.nextToken()
+		return nodes
+	}
+
+	p.nextToken()
+
+	node := &ast.IdentNode{Token: p.curT, Value: p.curT.Name}
+	nodes = append(nodes, node)
+
+	for p.peekToken(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		node := &ast.IdentNode{Token: p.curT, Value: p.curT.Name}
+		nodes = append(nodes, node)
+	}
+
+	if !p.expectPeekToken(token.RPAREN) {
+		return nil
+	}
+
+	return nodes
+}
+
+func (p *Parser) parseCall(function ast.Expression) ast.Expression {
+	// defer untrace(trace("parseCall"))
+
+	node := &ast.CallNode{Token: p.curT, Function: function}
+	node.Arguments = p.parseArguments()
+	return node
+}
+
+func (p *Parser) parseArguments() []ast.Expression {
+	// defer untrace(trace("parseArguments"))
+
+	nodes := []ast.Expression{}
+
+	if p.peekToken(token.RPAREN) {
+		p.nextToken()
+		return nodes
+	}
+
+	p.nextToken()
+	nodes = append(nodes, p.parseExpression(LOWEST))
+
+	for p.peekToken(token.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		nodes = append(nodes, p.parseExpression(LOWEST))
+	}
+
+	if !p.expectPeekToken(token.RPAREN) {
+		return nil
+	}
+
+	return nodes
 }

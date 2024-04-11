@@ -2,43 +2,35 @@ package ast
 
 import (
 	"bytes"
+	"strings"
 
 	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
 type Node interface {
-	GetTokenContent() string
 	String() string
 }
 
 type Statement interface {
 	Node
-	statementNode()
+	statement()
 }
 
 type Expression interface {
 	Node
-	expressionNode()
+	expression()
 }
 
 // ---------------------------------
 
-type Program struct {
-	StatementArray []Statement
+type ProgramNode struct {
+	Statements []Statement
 }
 
-func (p *Program) GetTokenContent() string {
-	if len(p.StatementArray) > 0 {
-		return p.StatementArray[0].GetTokenContent()
-	} else {
-		return ""
-	}
-}
-
-func (p *Program) String() string {
+func (p ProgramNode) String() string {
 	var out bytes.Buffer
 
-	for _, s := range p.StatementArray {
+	for _, s := range p.Statements {
 		out.WriteString(s.String())
 	}
 
@@ -47,25 +39,22 @@ func (p *Program) String() string {
 
 //--------------------
 
-type LetStatement struct {
-	Token         token.Token // let
-	LetName       *Identifier
-	LetExpression Expression
+type LetNode struct {
+	Token token.Token // let
+	Name  *IdentNode
+	Value Expression
 }
 
-func (ls *LetStatement) statementNode() {}
-func (ls LetStatement) GetTokenContent() string {
-	return ls.Token.Content
-}
-func (ls LetStatement) String() string {
+func (ls LetNode) statement() {}
+func (ls LetNode) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(ls.GetTokenContent() + " ")
-	out.WriteString(ls.LetName.String())
+	out.WriteString(ls.Token.Name + " ")
+	out.WriteString(ls.Name.String())
 	out.WriteString(" = ")
 
-	if ls.LetExpression != nil {
-		out.WriteString(ls.LetExpression.String())
+	if ls.Value != nil {
+		out.WriteString(ls.Value.String())
 	}
 
 	out.WriteString(";")
@@ -75,37 +64,31 @@ func (ls LetStatement) String() string {
 
 // ---------------------------------
 
-type Identifier struct {
-	Token      token.Token
-	IdentValue string
+type IdentNode struct {
+	Token token.Token
+	Value string
 }
 
-func (i *Identifier) expressionNode() {}
-func (i Identifier) GetTokenContent() string {
-	return i.Token.Content
-}
-func (i Identifier) String() string {
-	return i.IdentValue
+func (i IdentNode) expression() {}
+func (i IdentNode) String() string {
+	return i.Value
 }
 
 // ---------------------------------
 
-type ReturnStatement struct {
-	Token       token.Token
-	ReturnValue Expression
+type ReturnNode struct {
+	Token token.Token
+	Value Expression
 }
 
-func (rs *ReturnStatement) statementNode() {}
-func (rs ReturnStatement) GetTokenContent() string {
-	return rs.Token.Content
-}
-func (rs ReturnStatement) String() string {
+func (rs ReturnNode) statement() {}
+func (rs ReturnNode) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(rs.GetTokenContent() + " ")
+	out.WriteString(rs.Token.Name + " ")
 
-	if rs.ReturnValue != nil {
-		out.WriteString(rs.ReturnValue.String())
+	if rs.Value != nil {
+		out.WriteString(rs.Value.String())
 	}
 
 	out.WriteString(";")
@@ -115,51 +98,44 @@ func (rs ReturnStatement) String() string {
 
 // ---------------------------------
 
-type ExpressionStatement struct {
-	Token      token.Token
-	Expression Expression
+// Expression Statement
+type EsNode struct {
+	Token token.Token
+	Value Expression
 }
 
-func (es *ExpressionStatement) statementNode() {}
-func (es ExpressionStatement) GetTokenContent() string {
-	return es.Token.Content
-}
-func (es ExpressionStatement) String() string {
-	if es.Expression != nil {
-		return es.Expression.String()
+func (es EsNode) statement() {}
+func (es EsNode) String() string {
+	if es.Value != nil {
+		return es.Value.String()
 	}
 	return ""
 }
 
 // ---------------------------------
 
-type Integer struct {
-	Token        token.Token
-	IntegerValue int64
+type IntNode struct {
+	Token token.Token
+	Value int64
 }
 
-func (i *Integer) expressionNode() {}
-func (i Integer) GetTokenContent() string {
-	return i.Token.Content
-}
-func (i Integer) String() string {
-	return i.Token.Content
+func (i IntNode) expression() {}
+func (i IntNode) String() string {
+	return i.Token.Name
 }
 
 // ---------------------------------
 
-type PrefixExpression struct {
+type PrefixNode struct {
 	Token    token.Token
 	Operator string
 	Right    Expression
 }
 
-func (p *PrefixExpression) expressionNode() {}
-func (p PrefixExpression) GetTokenContent() string {
-	return p.Token.Content
-}
-func (p PrefixExpression) String() string {
+func (p PrefixNode) expression() {}
+func (p PrefixNode) String() string {
 	var out bytes.Buffer
+
 	out.WriteString("(")
 	out.WriteString(p.Operator)
 	out.WriteString(p.Right.String())
@@ -170,18 +146,15 @@ func (p PrefixExpression) String() string {
 
 // ---------------------------------
 
-type InfixExpression struct {
+type InfixNode struct {
 	Token    token.Token
 	Left     Expression
 	Operator string
 	Right    Expression
 }
 
-func (i *InfixExpression) expressionNode() {}
-func (i InfixExpression) GetTokenContent() string {
-	return i.Token.Content
-}
-func (i InfixExpression) String() string {
+func (i InfixNode) expression() {}
+func (i InfixNode) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("(")
@@ -193,12 +166,97 @@ func (i InfixExpression) String() string {
 	return out.String()
 }
 
-// 真偽値のAST表現
-type Boolean struct {
-	Token     token.Token
-	BoolValue bool
+type BoolNode struct {
+	Token token.Token
+	Value bool
 }
 
-func (b *Boolean) expressionNode()         {}
-func (b *Boolean) GetTokenContent() string { return b.Token.Content }
-func (b *Boolean) String() string          { return b.Token.Content }
+func (b BoolNode) expression()    {}
+func (b BoolNode) String() string { return b.Token.Name }
+
+// ------------------------
+
+type IfNode struct {
+	Token       token.Token
+	Condition   Expression
+	Consequence *BlockNode
+	Alternative *BlockNode
+}
+
+func (ie IfNode) expression() {}
+func (ie IfNode) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("if")
+	out.WriteString(ie.Condition.String())
+	out.WriteString(" ")
+	out.WriteString(ie.Consequence.String())
+
+	if ie.Alternative != nil {
+		out.WriteString("else ")
+		out.WriteString(ie.Alternative.String())
+	}
+
+	return out.String()
+}
+
+type BlockNode struct {
+	Token      token.Token
+	Statements []Statement
+}
+
+func (bs BlockNode) statement() {}
+func (bs BlockNode) String() string {
+	var out bytes.Buffer
+	for _, s := range bs.Statements {
+		out.WriteString(s.String())
+	}
+	return out.String()
+}
+
+type FunctionNode struct {
+	Token      token.Token // 'fn'
+	Parameters []*IdentNode
+	Body       *BlockNode
+}
+
+func (f FunctionNode) expression() {}
+func (f FunctionNode) String() string {
+	var out bytes.Buffer
+
+	params := []string{}
+	for _, p := range f.Parameters {
+		params = append(params, p.String())
+	}
+
+	out.WriteString(f.Token.Name)
+	out.WriteString("(")
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(") ")
+	out.WriteString(f.Body.String())
+
+	return out.String()
+}
+
+type CallNode struct {
+	Token     token.Token
+	Function  Expression // Identifier or Function
+	Arguments []Expression
+}
+
+func (c CallNode) expression() {}
+func (c CallNode) String() string {
+	var out bytes.Buffer
+
+	args := []string{}
+	for _, a := range c.Arguments {
+		args = append(args, a.String())
+	}
+
+	out.WriteString(c.Function.String())
+	out.WriteString("(")
+	out.WriteString(strings.Join(args, ", "))
+	out.WriteString(")")
+
+	return out.String()
+}
