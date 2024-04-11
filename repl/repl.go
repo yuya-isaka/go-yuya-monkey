@@ -9,6 +9,7 @@ import (
 
 	"github.com/yuya-isaka/go-yuya-monkey/evaluator"
 	"github.com/yuya-isaka/go-yuya-monkey/lexer"
+	"github.com/yuya-isaka/go-yuya-monkey/object"
 	"github.com/yuya-isaka/go-yuya-monkey/parser"
 )
 
@@ -16,6 +17,7 @@ const PROMPT = ">> "
 
 func Start(in io.Reader, out io.Writer) {
 	scanner := bufio.NewScanner(in)
+	env := object.NewEnvironment()
 
 	for {
 		fmt.Print(PROMPT)
@@ -33,7 +35,7 @@ func Start(in io.Reader, out io.Writer) {
 			continue
 		}
 
-		obj := evaluator.Eval(program)
+		obj := evaluator.Eval(program, env)
 		if obj != nil {
 			io.WriteString(out, obj.Inspect())
 			io.WriteString(out, "\n")

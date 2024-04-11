@@ -31,8 +31,7 @@ func TestEvalInt(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		obj := testEval(tt.input)
-		testIntObj(t, obj, tt.expect)
+		testIntObj(t, testEval(tt.input), tt.expect)
 	}
 }
 
@@ -63,8 +62,7 @@ func TestEvalBool(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		obj := testEval(tt.input)
-		testBoolObj(t, obj, tt.expect)
+		testBoolObj(t, testEval(tt.input), tt.expect)
 	}
 }
 
@@ -82,8 +80,7 @@ func TestBangOperator(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		obj := testEval(tt.input)
-		testBoolObj(t, obj, tt.expect)
+		testBoolObj(t, testEval(tt.input), tt.expect)
 	}
 }
 
@@ -134,8 +131,7 @@ func TestReturn(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		obj := testEval(tt.input)
-		testIntObj(t, obj, tt.expect)
+		testIntObj(t, testEval(tt.input), tt.expect)
 	}
 }
 
@@ -179,6 +175,10 @@ func TestError(t *testing.T) {
 			`,
 			"unknown operator: BOOL + BOOL",
 		},
+		{
+			"foobar",
+			"identifier not found: foobar",
+		},
 	}
 
 	for _, tt := range tests {
@@ -196,14 +196,31 @@ func TestError(t *testing.T) {
 	}
 }
 
+func TestLet(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect int64
+	}{
+		{"let a = 5; a;", 5},
+		{"let a = 5 * 5; a;", 25},
+		{"let a = 5; let b = a; b;", 5},
+		{"let a = 5; let b = a; let c = a + b + 5; c;", 15},
+	}
+
+	for _, tt := range tests {
+		testIntObj(t, testEval(tt.input), tt.expect)
+	}
+}
+
 // --------------------------------
 
 func testEval(input string) object.Object {
 	l := lexer.NewLexer(input)
 	p := parser.NewParser(l)
 	program := p.ParseProgram()
+	env := object.NewEnvironment()
 
-	return Eval(program)
+	return Eval(program, env)
 }
 
 // --------------------------------

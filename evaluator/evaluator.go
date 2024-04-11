@@ -14,29 +14,45 @@ var (
 	FALSE = &object.BoolObj{Value: false}
 )
 
-func Eval(node ast.Node) object.Object {
+func Eval(node ast.Node, env *object.Environment) object.Object {
 	switch node := node.(type) {
 	case *ast.ProgramNode:
-		var result object.Object
+		var obj object.Object
 
 		for _, statement := range node.Statements {
-			result = Eval(statement)
+			obj = Eval(statement, env)
 
 			// 中身を取り出すには型アサーション必要
-			switch result := result.(type) {
+			switch obj := obj.(type) {
 			case *object.ReturnObj:
-				return result.Value
+				return obj.Value
 			case *object.ErrorObj:
-				return result
+				return obj
 			}
 		}
 
 		// 最後に評価した結果を返す
 		// Returnあったらそれを事前に返している
-		return result
+		return obj
+
+	case *ast.LetNode:
+		obj := Eval(node.Value, env)
+		if isErrorObj(obj) {
+			return obj
+		}
+
+		env.Set(node.Name.Value, obj)
+
+	case *ast.IdentNode:
+		obj, ok := env.Get(node.Value)
+		if !ok {
+			return newErrorObj("identifier not found: " + node.Value)
+		}
+
+		return obj
 
 	case *ast.EsNode:
-		return Eval(node.Value)
+		return Eval(node.Value, env)
 
 	case *ast.IntNode:
 		return &object.IntObj{Value: node.Value}
@@ -45,18 +61,18 @@ func Eval(node ast.Node) object.Object {
 		return changeBoolObj(node.Value)
 
 	case *ast.PrefixNode:
-		right := Eval(node.Right)
+		right := Eval(node.Right, env)
 		if isErrorObj(right) {
 			return right
 		}
 		return evalPrefix(node.Operator, right)
 
 	case *ast.InfixNode:
-		left := Eval(node.Left)
+		left := Eval(node.Left, env)
 		if isErrorObj(left) {
 			return left
 		}
-		right := Eval(node.Right)
+		right := Eval(node.Right, env)
 		if isErrorObj(right) {
 			return right
 		}
@@ -108,42 +124,42 @@ func Eval(node ast.Node) object.Object {
 		}
 
 	case *ast.BlockNode:
-		var result object.Object
+		var obj object.Object
 
 		for _, statement := range node.Statements {
-			result = Eval(statement)
+			obj = Eval(statement, env)
 
-			if result != nil {
-				rt := result.Type()
-				if rt == object.RETURN || rt == object.ERROR {
+			if obj != nil {
+				vt := obj.Type()
+				if vt == object.RETURN || vt == object.ERROR {
 					// そのまま上に上げる
-					return result
+					return obj
 				}
 			}
 		}
 
-		return result
+		return obj
 
 	case *ast.IfNode:
-		condition := Eval(node.Condition)
+		condition := Eval(node.Condition, env)
 		if isErrorObj(condition) {
 			return condition
 		}
 
 		if isTruthy(condition) {
-			return Eval(node.Consequence)
+			return Eval(node.Consequence, env)
 		} else if node.Alternative != nil {
-			return Eval(node.Alternative)
+			return Eval(node.Alternative, env)
 		} else {
 			return NULL
 		}
 
 	case *ast.ReturnNode:
-		result := Eval(node.Value)
-		if isErrorObj(result) {
-			return result
+		obj := Eval(node.Value, env)
+		if isErrorObj(obj) {
+			return obj
 		}
-		return &object.ReturnObj{Value: result}
+		return &object.ReturnObj{Value: obj}
 
 	}
 

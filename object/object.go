@@ -59,3 +59,9 @@ type ErrorObj struct {
 
 func (e ErrorObj) Type() ObjectType { return ERROR }
 func (e ErrorObj) Inspect() string  { return "ERROR: " + e.Value }
+
+// ---------------------------------
+
+// 変数の内部表現はいらないんやなーー
+
+// ---------------------------------
