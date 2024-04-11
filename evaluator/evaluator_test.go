@@ -112,6 +112,23 @@ func TestIfElse(t *testing.T) {
 	}
 }
 
+func TestReturn(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect int64
+	}{
+		{"return 10;", 10},
+		{"return 10; 9;", 10},
+		{"return 2 * 5; 9;", 10},
+		{"9; return 2 * 5; 9;", 10},
+	}
+
+	for _, tt := range tests {
+		obj := testEval(tt.input)
+		testIntObj(t, obj, tt.expect)
+	}
+}
+
 // --------------------------------
 
 func testEval(input string) object.Object {

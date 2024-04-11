@@ -90,6 +90,11 @@ func Eval(node ast.Node) object.Object {
 		} else {
 			return NULL
 		}
+
+	case *ast.ReturnNode:
+		result := Eval(node.Value)
+		return &object.ReturnObj{Value: result}
+
 	}
 
 	return nil
@@ -100,9 +105,14 @@ func evalStatements(stmts []ast.Statement) object.Object {
 
 	for _, statement := range stmts {
 		result = Eval(statement)
+
+		if returnValue, ok := result.(*object.ReturnObj); ok {
+			return returnValue.Value
+		}
 	}
 
 	// 最後に評価した結果を返す
+	// Returnあったらそれを事前に返している
 	return result
 }
 
