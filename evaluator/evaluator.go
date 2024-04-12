@@ -111,13 +111,20 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			}
 
 		case left.Type() == object.STRING && right.Type() == object.STRING:
-			if node.Operator != "+" {
+			if node.Operator != "+" && node.Operator != "==" && node.Operator != "!=" {
 				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 			}
 
 			leftVal := left.(*object.String).Value
 			rightVal := right.(*object.String).Value
-			return &object.String{Value: leftVal + rightVal}
+			switch node.Operator {
+			case "+":
+				return &object.String{Value: leftVal + rightVal}
+			case "==":
+				return changeBoolObj(leftVal == rightVal)
+			case "!=":
+				return changeBoolObj(leftVal != rightVal)
+			}
 
 		// オブジェクトを指し示すのにポインタ（参照）のみを使っていて、ポインタを比較すればいい
 		// 		ポインタ（配置されているメモリアドレス）を比較している
