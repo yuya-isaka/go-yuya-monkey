@@ -204,6 +204,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	case token.FUNCTION:
 		left = p.parseFunction()
 
+	case token.STRING:
+		left = p.parseString()
+
 	default:
 		msg := fmt.Sprintf("no prefix parse function for %s found", p.curT.Type)
 		p.errors = append(p.errors, msg)
@@ -502,4 +505,8 @@ func (p *Parser) parseArguments() []ast.Expression {
 	}
 
 	return nodes
+}
+
+func (p *Parser) parseString() ast.Expression {
+	return &ast.StringNode{Token: p.curT, Value: p.curT.Name}
 }

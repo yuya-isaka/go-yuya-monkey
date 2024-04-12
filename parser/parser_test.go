@@ -655,7 +655,25 @@ func TestCallExpressinParameterParsing(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestString(t *testing.T) {
+	input := `"hello world";`
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt := program.Statements[0].(*ast.EsNode)
+	node, ok := stmt.Value.(*ast.StringNode)
+	if !ok {
+		t.Fatalf("exp not *ast.StringNode. got=%T", stmt.Value)
+	}
+
+	if node.Value != "hello world" {
+		t.Errorf("node.Value not %q. got=%q", "hello world", node.Value)
+	}
 }
 
 // -------------------------------- ヘルパー関数

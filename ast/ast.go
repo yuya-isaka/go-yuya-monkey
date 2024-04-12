@@ -260,3 +260,11 @@ func (c CallNode) String() string {
 
 	return out.String()
 }
+
+type StringNode struct {
+	Token token.Token
+	Value string
+}
+
+func (s StringNode) expression()    {}
+func (s StringNode) String() string { return s.Token.Name }
