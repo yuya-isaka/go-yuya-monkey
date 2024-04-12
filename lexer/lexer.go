@@ -64,8 +64,18 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LT, string(l.ch))
 	case '>':
 		tok = newToken(token.GT, string(l.ch))
-	case 0:
+	case 0: // stringから取り出したものが0 がEOF（普通の0は多分別のバイト列になってるな）
 		tok = newToken(token.EOF, string(l.ch))
+	case '"':
+		tok.Type = token.STRING
+		pos := l.pos + 1
+		for {
+			l.nextPos()
+			if l.ch == '"' || l.ch == 0 {
+				break
+			}
+		}
+		tok.Name = l.input[pos:l.pos]
 	default:
 		if isLetter(l.ch) {
 			tok.Name = l.readIdent()

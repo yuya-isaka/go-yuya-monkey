@@ -28,6 +28,7 @@ const (
 	RETURN    = "RETURN"
 	TRUE      = "TRUE"
 	FALSE     = "FALSE"
+	STRING    = "STRING"
 )
 
 type TokenType string

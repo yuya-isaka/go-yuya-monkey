@@ -26,6 +26,8 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
+"foobar"
+"foo bar"
 `
 
 	tests := []struct {
@@ -105,7 +107,9 @@ if (5 < 10) {
 		{token.NOT_EQ, "!="},
 		{token.INT, "9"},
 		{token.SEMICOLON, ";"},
-		{token.EOF, "\x00"},
+		{token.STRING, "foobar"},
+		{token.STRING, "foo bar"},
+		{token.EOF, "\x00"}, // 0をstringにすると、"\x00"になる。これと比べないといけない これはGo言語的な問題だな
 	}
 
 	l := NewLexer(input)
