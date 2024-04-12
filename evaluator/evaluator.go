@@ -60,6 +60,9 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 	case *ast.BoolNode:
 		return changeBoolObj(node.Value)
 
+	case *ast.StringNode:
+		return &object.String{Value: node.Value}
+
 	case *ast.PrefixNode:
 		right := Eval(node.Right, env)
 		if isErrorObj(right) {
