@@ -44,12 +44,15 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		env.Set(node.Name.Value, obj)
 
 	case *ast.IdentNode:
-		obj, ok := env.Get(node.Value)
-		if !ok {
-			return newErrorObj("identifier not found: " + node.Value)
+		if obj, ok := env.Get(node.Value); ok {
+			return obj
+		}
+		// 環境から見つけられなかったらフォールバックして組込み関数調べる
+		if builtin, ok := builtins[node.Value]; ok {
+			return builtin
 		}
 
-		return obj
+		return newErrorObj("identifier not found: " + node.Value)
 
 	case *ast.EsNode:
 		return Eval(node.Value, env)
@@ -61,7 +64,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return changeBoolObj(node.Value)
 
 	case *ast.StringNode:
-		return &object.String{Value: node.Value}
+		return &object.StringObj{Value: node.Value}
 
 	case *ast.PrefixNode:
 		right := Eval(node.Right, env)
@@ -115,11 +118,11 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 			}
 
-			leftVal := left.(*object.String).Value
-			rightVal := right.(*object.String).Value
+			leftVal := left.(*object.StringObj).Value
+			rightVal := right.(*object.StringObj).Value
 			switch node.Operator {
 			case "+":
-				return &object.String{Value: leftVal + rightVal}
+				return &object.StringObj{Value: leftVal + rightVal}
 			case "==":
 				return changeBoolObj(leftVal == rightVal)
 			case "!=":
@@ -199,27 +202,32 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			args = append(args, obj)
 		}
 
-		fn, ok := function.(*object.FunctionObj)
-		if !ok {
-			return newErrorObj("not a function: %s", fn.Type())
-		}
+		switch fn := function.(type) {
+		case *object.FunctionObj:
+			// パラメータを『拡張した環境』に束縛
+			extendedEnv := object.NewEnclosedEnvironment(fn.Env)
+			for paramIdx, param := range fn.Parameters {
+				env.Set(param.Value, args[paramIdx])
+			}
 
-		// パラメータを『拡張した環境』に束縛
-		extendedEnv := object.NewEnclosedEnvironment(fn.Env)
-		for paramIdx, param := range fn.Parameters {
-			env.Set(param.Value, args[paramIdx])
-		}
+			// ボディと『拡張した環境』で評価
+			result := Eval(fn.Body, extendedEnv)
+			// もし、結果がReturnオブジェクトだったらそのまま返却
+			// その関数からのリターンだから、これはBlockの時みたいに上に上げなくていい
+			// むしろこのif文がないと、そのままReturnが浮上して処理が止まってしまう
+			if returnValue, ok := result.(*object.ReturnObj); ok {
+				return returnValue.Value
+			}
 
-		// ボディと『拡張した環境』で評価
-		result := Eval(fn.Body, extendedEnv)
-		// もし、結果がReturnオブジェクトだったらそのまま返却
-		// その関数からのリターンだから、これはBlockの時みたいに上に上げなくていい
-		// むしろこのif文がないと、そのままReturnが浮上して処理が止まってしまう
-		if returnValue, ok := result.(*object.ReturnObj); ok {
-			return returnValue.Value
-		}
+			return result
 
-		return result
+		// 絶対にReturnを返さないので、アンラップする必要がない
+		case *object.BuiltinObj:
+			return fn.Fn(args...)
+
+		default:
+			return newErrorObj("not a function: %s", function.Type()) // 存在していないfn.Type()しててランタイムエラーになっていた
+		}
 
 	}
 

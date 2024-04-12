@@ -308,7 +308,7 @@ func TestString(t *testing.T) {
 	input := `"Hello World!"`
 
 	obj := testEval(input)
-	str, ok := obj.(*object.String)
+	str, ok := obj.(*object.StringObj)
 	if !ok {
 		t.Fatalf("object is not String. got=%T (%+v)", obj, obj)
 	}
@@ -322,13 +322,45 @@ func TestStringConcatenation(t *testing.T) {
 	input := `"Hello" + " " + "World!"`
 
 	obj := testEval(input)
-	str, ok := obj.(*object.String)
+	str, ok := obj.(*object.StringObj)
 	if !ok {
 		t.Fatalf("object is not String. got=%T (%+v)", obj, obj)
 	}
 
 	if str.Value != "Hello World!" {
 		t.Errorf("String has wrong value. got=%q", str.Value)
+	}
+}
+
+func TestBuiltinFunction(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect interface{}
+	}{
+		{`len("")`, 0},
+		{`len("four")`, 4},
+		{`len("hello world")`, 11},
+		{`len(1)`, "argument to `len` not supported, got INT"},
+		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+	}
+
+	for _, tt := range tests {
+		obj := testEval(tt.input)
+
+		switch expect := tt.expect.(type) {
+		case int:
+			testIntObj(t, obj, int64(expect))
+		case string:
+			errObj, ok := obj.(*object.ErrorObj)
+			if !ok {
+				t.Errorf("object is not Error. got=%T (%+v)", obj, obj)
+				continue
+			}
+
+			if errObj.Value != expect {
+				t.Errorf("wrong error message. expected=%q, got=%q", expect, errObj.Value)
+			}
+		}
 	}
 }
 
