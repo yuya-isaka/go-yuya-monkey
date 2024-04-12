@@ -129,13 +129,16 @@ func (p *Parser) parseLet() ast.Statement {
 		p.nextToken()
 	}
 
-	if !p.curToken(token.SEMICOLON) {
-		msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
-		p.errors = append(p.errors, msg)
-		return nil
-	}
+	// セミコロンなしでもいいので、これあるとエラーになってしまう
+	// 特にreplでそれを感じた
+	// if !p.curToken(token.SEMICOLON) {
+	// 	msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
+	// 	p.errors = append(p.errors, msg)
+	// 	return nil
+	// }
 
 	// セミコロンで返る
+	// もしくはセミコロンなし
 	return node
 }
 

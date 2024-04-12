@@ -110,6 +110,15 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 			}
 
+		case left.Type() == object.STRING && right.Type() == object.STRING:
+			if node.Operator != "+" {
+				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
+			}
+
+			leftVal := left.(*object.String).Value
+			rightVal := right.(*object.String).Value
+			return &object.String{Value: leftVal + rightVal}
+
 		// オブジェクトを指し示すのにポインタ（参照）のみを使っていて、ポインタを比較すればいい
 		// 		ポインタ（配置されているメモリアドレス）を比較している
 		//  	オブジェクトは、整数かTRUEかFALSEかNULLだけ。整数は先に計算して、残りは参照だけ
