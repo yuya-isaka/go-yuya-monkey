@@ -11,6 +11,7 @@ import (
 func main() {
 	user, err := user.Current()
 	if err != nil {
+		// deferを実行する
 		panic(err)
 	}
 	fmt.Printf("Hello %s! This is the Monkey programming language!\n", user.Username)

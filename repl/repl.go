@@ -16,7 +16,10 @@ import (
 const PROMPT = ">> "
 
 func Start(in io.Reader, out io.Writer) {
+	// io関連バッファーしがち
 	scanner := bufio.NewScanner(in)
+	// インタプリタの起動のたびに定義
+	// それ以降は新しくしない（だって記憶したいもの）
 	env := object.NewEnvironment()
 
 	for {
@@ -25,11 +28,12 @@ func Start(in io.Reader, out io.Writer) {
 		if !scanned {
 			return
 		}
+
 		line := scanner.Text()
 		l := lexer.NewLexer(line)
 		p := parser.NewParser(l)
-
 		program := p.ParseProgram()
+
 		if len(p.Errors()) != 0 {
 			printParseErrors(out, p.Errors())
 			continue
