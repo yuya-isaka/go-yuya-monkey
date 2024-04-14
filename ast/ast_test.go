@@ -7,6 +7,8 @@ import (
 )
 
 func TestString(t *testing.T) {
+	input := "let myVar = anotherVar;"
+
 	program := &ProgramNode{
 		Statements: []Statement{
 			&LetNode{
@@ -23,7 +25,7 @@ func TestString(t *testing.T) {
 		},
 	}
 
-	if program.String() != "let myVar = anotherVar;" {
+	if program.String() != input {
 		t.Errorf("program.String() wrong. got=%q", program.String())
 	}
 }

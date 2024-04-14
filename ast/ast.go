@@ -88,10 +88,11 @@ type EsNode struct {
 	Value Expression  // 持つ式
 }
 
-func (es EsNode) statement() {}
-func (es EsNode) String() string {
-	if es.Value != nil {
-		return es.Value.String()
+func (e EsNode) statement() {}
+func (e EsNode) String() string {
+
+	if e.Value != nil {
+		return e.Value.String()
 	}
 	return ""
 }
@@ -101,12 +102,14 @@ type BlockNode struct {
 	Statements []Statement
 }
 
-func (bs BlockNode) statement() {}
-func (bs BlockNode) String() string {
+func (b BlockNode) statement() {}
+func (b BlockNode) String() string {
 	var out bytes.Buffer
-	for _, s := range bs.Statements {
+
+	for _, s := range b.Statements {
 		out.WriteString(s.String())
 	}
+
 	return out.String()
 }
 
@@ -188,18 +191,18 @@ type IfNode struct {
 	Alternative *BlockNode  // ブロックノード
 }
 
-func (ie IfNode) expression() {}
-func (ie IfNode) String() string {
+func (i IfNode) expression() {}
+func (i IfNode) String() string {
 	var out bytes.Buffer
 
 	out.WriteString("if")
-	out.WriteString(ie.Condition.String())
+	out.WriteString(i.Condition.String())
 	out.WriteString(" ")
-	out.WriteString(ie.Consequence.String())
+	out.WriteString(i.Consequence.String())
 
-	if ie.Alternative != nil {
+	if i.Alternative != nil {
 		out.WriteString("else ")
-		out.WriteString(ie.Alternative.String())
+		out.WriteString(i.Alternative.String())
 	}
 
 	return out.String()
@@ -215,7 +218,7 @@ func (f FunctionNode) expression() {}
 func (f FunctionNode) String() string {
 	var out bytes.Buffer
 
-	params := []string{}
+	params := make([]string, 0, len(f.Parameters))
 	for _, p := range f.Parameters {
 		params = append(params, p.String())
 	}
@@ -239,7 +242,7 @@ func (c CallNode) expression() {}
 func (c CallNode) String() string {
 	var out bytes.Buffer
 
-	args := []string{}
+	args := make([]string, 0, len(c.Arguments))
 	for _, a := range c.Arguments {
 		args = append(args, a.String())
 	}

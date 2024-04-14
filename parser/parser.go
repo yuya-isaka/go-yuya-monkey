@@ -9,6 +9,7 @@ import (
 	"github.com/yuya-isaka/go-yuya-monkey/token"
 )
 
+// 優先順位
 const (
 	_ int = iota
 	LOWEST
@@ -20,6 +21,7 @@ const (
 	CALL
 )
 
+// 優先順位表
 var precedences = map[token.TokenType]int{
 	token.EQ:       EQUALS,
 	token.NOT_EQ:   EQUALS,
@@ -55,7 +57,6 @@ func NewParser(l *lexer.Lexer) *Parser {
 func (p *Parser) ParseProgram() *ast.ProgramNode {
 	// defer untrace(trace("ParseProgram"))
 
-	// 作る
 	node := &ast.ProgramNode{
 		Statements: []ast.Statement{},
 	}
@@ -63,14 +64,15 @@ func (p *Parser) ParseProgram() *ast.ProgramNode {
 	// 文をトークンの最後まで
 	for !p.curToken(token.EOF) {
 		stmt := p.parseStatement()
+
 		if stmt == nil {
 			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
 			p.errors = append(p.errors, msg)
+		} else {
+			node.Statements = append(node.Statements, stmt)
 		}
-		node.Statements = append(node.Statements, stmt)
 
-		// セミコロンで返ってきているはず
-		// 式文なら文の末尾
+		// [セミコロン] or [式文なら文の末尾]で返ってきているはず
 		p.nextToken()
 	}
 
