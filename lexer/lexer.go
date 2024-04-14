@@ -5,9 +5,9 @@ import (
 )
 
 type Lexer struct {
-	input string
-	pos   int
-	ch    byte
+	input string // ソースコード全部
+	pos   int    // 読んでいる場所
+	ch    byte   // 読んでいる場所のバイト
 }
 
 func NewLexer(input string) *Lexer {
@@ -21,7 +21,10 @@ func NewLexer(input string) *Lexer {
 func (l *Lexer) NextToken() token.Token {
 	var tok token.Token
 
-	l.ignoreSpace()
+	// 空白文字, 改行, タブ, キャリッジリターンを無視
+	for l.ch == '\n' || l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
+		l.nextPos()
+	}
 
 	switch l.ch {
 	case '=':
@@ -64,37 +67,50 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LT, string(l.ch))
 	case '>':
 		tok = newToken(token.GT, string(l.ch))
-	case 0: // stringから取り出したものが0 がEOF（普通の0は多分別のバイト列になってるな）
+	case 0: // EOF==0, 整数0==48
 		tok = newToken(token.EOF, string(l.ch))
 	case '"':
-		tok.Type = token.STRING
 		pos := l.pos + 1
 		for {
 			l.nextPos()
+			// EOFで判断しないと"出るまで永遠に終わらない
+			// 「何かが出たら終わる」っていう条件分岐をするときは、対象のものが出ない時のことを考える
 			if l.ch == '"' || l.ch == 0 {
 				break
 			}
 		}
-		tok.Name = l.input[pos:l.pos]
+		tok = newToken(token.STRING, l.input[pos:l.pos])
 	default:
-		if isLetter(l.ch) {
-			tok.Name = l.readIdent()
-			tok.Type = token.LookKeyword(tok.Name)
-			return tok
-		} else if isNumber(l.ch) {
-			tok.Name = l.readNumber()
-			tok.Type = token.INT
-			return tok
+		switch {
+		case isLetter(l.ch):
+			pos := l.pos
+			// ーーじゃなかったら終わり系ははっきりしている
+			for isLetter(l.ch) {
+				l.nextPos()
+			}
+			// 次の文字まで進んでしまっているからここでリターン
+			// 文字だったら「キーワード」チェック。キーワードか変数かここじゃわからん
+			return newToken(token.LookKeyword(l.input[pos:l.pos]), l.input[pos:l.pos])
+		case isNumber(l.ch):
+			pos := l.pos
+			// ーーじゃなかったら終わり系ははっきりしている
+			for isNumber(l.ch) {
+				l.nextPos()
+			}
+			// 次の文字まで進んでしまっているからここでリターン
+			return newToken(token.INT, l.input[pos:l.pos])
+		default:
+			// おかしい
+			tok = newToken(token.ILLEGAL, string(l.ch))
 		}
-
-		// おかしい
-		tok = newToken(token.ILLEGAL, string(l.ch))
 	}
 
 	l.nextPos()
 
 	return tok
 }
+
+// -----------------------------------------------------------------
 
 func newToken(tt token.TokenType, name string) token.Token {
 	return token.Token{Type: tt, Name: name}
@@ -119,30 +135,9 @@ func isNumber(ch byte) bool {
 	return '0' <= ch && ch <= '9'
 }
 
-func (l *Lexer) readIdent() string {
-	pos := l.pos
-	for isLetter(l.ch) {
-		l.nextPos()
-	}
-	return l.input[pos:l.pos]
-}
-
-func (l *Lexer) readNumber() string {
-	pos := l.pos
-	for isNumber(l.ch) {
-		l.nextPos()
-	}
-	return l.input[pos:l.pos]
-}
-
-func (l *Lexer) ignoreSpace() {
-	for l.ch == '\n' || l.ch == ' ' || l.ch == '\t' || l.ch == '\r' {
-		l.nextPos()
-	}
-}
-
 func (l Lexer) peek() byte {
 	peekPos := l.pos + 1
+	// 先を見るときは境界チェックを気をつけて
 	if peekPos >= len(l.input) {
 		return 0
 	}

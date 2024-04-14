@@ -34,10 +34,12 @@ const (
 type TokenType string
 
 type Token struct {
-	Type TokenType
-	Name string
+	Type TokenType // 型
+	Name string    // 名前
 }
 
+// キーワードたち
+// 名前で型を返す(名前→型)
 var keywords = map[string]TokenType{
 	"fn":     FUNCTION,
 	"let":    LET,
