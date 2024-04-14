@@ -43,6 +43,7 @@ type Parser struct {
 }
 
 func NewParser(l *lexer.Lexer) *Parser {
+
 	p := &Parser{
 		lex:    l,
 		errors: []string{},
@@ -54,7 +55,10 @@ func NewParser(l *lexer.Lexer) *Parser {
 	return p
 }
 
+// --------------------------------------------------------------------------
+
 func (p *Parser) ParseProgram() *ast.ProgramNode {
+
 	node := &ast.ProgramNode{
 		Statements: []ast.Statement{},
 	}
@@ -63,6 +67,7 @@ func (p *Parser) ParseProgram() *ast.ProgramNode {
 	for !p.curToken(token.EOF) {
 		stmt := p.parseStatement()
 
+		// 構文解析のエラーは、エラー配列にためてnilで返ってくるようにしている
 		if stmt == nil {
 			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
 			p.errors = append(p.errors, msg)
@@ -77,7 +82,41 @@ func (p *Parser) ParseProgram() *ast.ProgramNode {
 	return node
 }
 
+// 返る先の型が指定されているから、返り値の型はast.Statementではなく*ast.BlockNode
+func (p *Parser) parseBlock() *ast.BlockNode {
+
+	node := &ast.BlockNode{
+		Token:      p.curT,
+		Statements: []ast.Statement{},
+	}
+
+	p.nextToken()
+
+	// 文をトークンの最後まで（"}"を忘れた場合、次々に"}"が出てくるまで、トークンを勧めながら文を読もうとしてしまうのでそれを避けるために、token.EOFでも確認）
+	for !p.curToken(token.RBRACE) && !p.curToken(token.EOF) {
+
+		stmt := p.parseStatement()
+
+		// 構文解析のエラーは、エラー配列にためてnilで返ってくるようにしている
+		if stmt == nil {
+			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
+			p.errors = append(p.errors, msg)
+		} else {
+			node.Statements = append(node.Statements, stmt)
+		}
+
+		// [セミコロン] or [式文なら文の末尾]で返ってきているはず
+		p.nextToken()
+	}
+
+	return node
+}
+
+// --------------------------------------------------------------------------
+
 func (p *Parser) parseStatement() ast.Statement {
+
+	// トークンで判断するPratt構文解析
 	switch p.curT.Type {
 	case token.LET:
 		return p.parseLet()
@@ -88,9 +127,11 @@ func (p *Parser) parseStatement() ast.Statement {
 	default:
 		return p.parseES() // 式文
 	}
+
 }
 
 func (p *Parser) parseLet() ast.Statement {
+
 	node := &ast.LetNode{Token: p.curT}
 
 	// let a = 3;
@@ -118,23 +159,22 @@ func (p *Parser) parseLet() ast.Statement {
 	// どちらか
 	// let a = 3;
 	//         ↑
-	// or
-	// let a = 3;
-	//          ↑
-	if !p.curToken(token.SEMICOLON) {
-		p.nextToken()
+	// セミコロンのわけがない
+	if p.curToken(token.SEMICOLON) {
+		p.errors = append(p.errors, "\";\" is wrong!!!")
+		return nil
 	}
 
-	// セミコロンなしでもいいので、これあるとエラーになってしまう
-	// 特にreplでそれを感じた
-	// if !p.curToken(token.SEMICOLON) {
-	// 	msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
-	// 	p.errors = append(p.errors, msg)
-	// 	return nil
-	// }
+	p.nextToken()
+
+	// letは";"が必須です
+	if !p.curToken(token.SEMICOLON) {
+		msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
+		p.errors = append(p.errors, msg)
+		return nil
+	}
 
 	// セミコロンで返る
-	// もしくはセミコロンなし
 	return node
 }
 
@@ -145,10 +185,15 @@ func (p *Parser) parseReturn() ast.Statement {
 
 	node.Value = p.parseExpression(LOWEST)
 
-	if !p.curToken(token.SEMICOLON) {
-		p.nextToken()
+	// セミコロンのわけがない
+	if p.curToken(token.SEMICOLON) {
+		p.errors = append(p.errors, "\";\" is wrong!!!")
+		return nil
 	}
 
+	p.nextToken()
+
+	// returnは";"が必須です
 	if !p.curToken(token.SEMICOLON) {
 		msg := fmt.Sprintf("\";\" is nothing!!! token is %q", p.curT.Type)
 		p.errors = append(p.errors, msg)
@@ -163,18 +208,28 @@ func (p *Parser) parseES() ast.Statement {
 	node := &ast.EsNode{Token: p.curT}
 	node.Value = p.parseExpression(LOWEST)
 
+	// セミコロンのわけがない
+	if p.curToken(token.SEMICOLON) {
+		p.errors = append(p.errors, "\";\" is wrong!!!")
+		return nil
+	}
+
 	// 式文のセミコロンなしOK
 	if p.peekToken(token.SEMICOLON) {
 		p.nextToken()
 	}
 
-	// セミコロンか式文の最後で返る
+	// [セミコロン] or [式文なら文の末尾]
 	return node
 }
 
+// --------------------------------------------------------------------------
+
+// precedenceに入っている優先順位は、真左の優先順位
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	var left ast.Expression
 
+	// トークンで呼び出す関数を決める（Pratt構文解析）
 	switch p.curT.Type {
 	case token.IDENT:
 		left = p.parseIdent()
@@ -206,18 +261,20 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 
+	// 左辺 vs 右辺
 	for !p.peekToken(token.SEMICOLON) && precedence < p.peekPrecedence() {
 		switch p.peekT.Type {
 		case token.EQ, token.NOT_EQ, token.LT, token.GT, token.PLUS, token.MINUS, token.ASTERISK, token.SLASH:
 			p.nextToken()
 			left = p.parseInfix(left)
 
+			// 関数呼び出し
 		case token.LPAREN:
 			p.nextToken()
 			left = p.parseCall(left)
 
 		default:
-			msg := fmt.Sprintf("ここにくるのはなんだ %q", p.peekT.Type)
+			msg := fmt.Sprintf("Infix Error: %T (%+v)", p.peekT, p.peekT)
 			p.errors = append(p.errors, msg)
 			return nil
 		}
@@ -226,7 +283,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	return left
 }
 
-//--------------------
+// --------------------------------------------------------------------------
 
 func (p *Parser) nextToken() {
 	p.curT = p.peekT
@@ -259,6 +316,7 @@ func (p *Parser) peekPrecedence() int {
 		return p
 	}
 
+	// 表にないやつ一番下
 	return LOWEST
 }
 
@@ -267,6 +325,7 @@ func (p *Parser) curPrecedence() int {
 		return p
 	}
 
+	// 表にないやつ一番下
 	return LOWEST
 }
 
@@ -284,6 +343,7 @@ func (p *Parser) parseIdent() ast.Expression {
 
 func (p *Parser) parseInt() ast.Expression {
 	value, err := strconv.ParseInt(p.curT.Name, 0, 64)
+
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curT.Name)
 		p.errors = append(p.errors, msg)
@@ -302,6 +362,7 @@ func (p *Parser) parsePrefix() ast.Expression {
 
 	p.nextToken()
 
+	// 左がPREFIXだよーって投げる
 	node.Right = p.parseExpression(PREFIX)
 
 	return node
@@ -318,7 +379,6 @@ func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
 	// ここが超大事
 	// parseExpressionを呼び出すときの、precedenceをどうするかで大きく変わってくる。
 	precedence := p.curPrecedence()
-
 	p.nextToken()
 	node.Right = p.parseExpression(precedence)
 
@@ -326,7 +386,9 @@ func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseBool() ast.Expression {
+
 	return &ast.BoolNode{Token: p.curT, Value: p.curToken(token.TRUE)}
+
 }
 
 func (p *Parser) parseGroup() ast.Expression {
@@ -372,34 +434,6 @@ func (p *Parser) parseIf() ast.Expression {
 		}
 
 		node.Alternative = p.parseBlock()
-	}
-
-	return node
-}
-
-// 返る先の型が指定されているから、返り値の型はast.Statementではなく*ast.BlockNode
-func (p *Parser) parseBlock() *ast.BlockNode {
-
-	node := &ast.BlockNode{
-		Token:      p.curT,
-		Statements: []ast.Statement{},
-	}
-
-	p.nextToken()
-
-	// 文をトークンの最後まで（"}"を忘れた場合、次々に"}"が出てくるまで、トークンを勧めながら文を読もうとしてしまうのでそれを避けるために、token.EOFでも確認）
-	for !p.curToken(token.RBRACE) && !p.curToken(token.EOF) {
-		stmt := p.parseStatement()
-		if stmt == nil {
-			msg := fmt.Sprintf("文がnilだぜ %T", stmt)
-			p.errors = append(p.errors, msg)
-		}
-
-		node.Statements = append(node.Statements, stmt)
-
-		// セミコロンで帰ってくるはず
-		// 式文なら文の末尾かも
-		p.nextToken()
 	}
 
 	return node
