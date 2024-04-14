@@ -1,5 +1,7 @@
 package parser
 
+// 構文解析とは、Token構造体をNodeインタフェースを満たした構造体にすること
+
 import (
 	"fmt"
 	"strconv"

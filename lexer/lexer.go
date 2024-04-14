@@ -1,5 +1,7 @@
 package lexer
 
+// 字句解析とは、文字をToken構造体にすること
+
 import (
 	"github.com/yuya-isaka/go-yuya-monkey/token"
 )

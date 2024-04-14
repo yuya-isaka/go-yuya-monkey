@@ -1,5 +1,9 @@
 package evaluator
 
+// 評価とは、Nodeインタフェースを満たした構造体をObjectインタフェースを満たした構造体にすること
+
+// このフェーズで、初めて、プログラミング言語に意味があらわれる
+
 import (
 	"fmt"
 
@@ -15,6 +19,12 @@ var (
 )
 
 func Eval(node ast.Node, env *object.Environment) object.Object {
+
+	// [ノード → オブジェクト]しまくる
+	//		- 文はそのままEval呼び出し
+	// 		- 式はそのままEval呼び出し
+	// 		- 他のやつは変換
+	//    - リターンだったら即返却
 	switch node := node.(type) {
 	case *ast.ProgramNode:
 		var obj object.Object
@@ -24,10 +34,32 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 			// 中身を取り出すには型アサーション必要
 			switch obj := obj.(type) {
+			// リターンなら中身取り出し
 			case *object.ReturnObj:
 				return obj.Value
+			// エラーならそのまま
 			case *object.ErrorObj:
 				return obj
+			}
+		}
+
+		// 最後に評価した結果を返す
+		// Returnあったらそれを事前に返している
+		return obj
+
+	case *ast.BlockNode:
+		var obj object.Object
+
+		for _, statement := range node.Statements {
+			obj = Eval(statement, env)
+
+			if obj != nil {
+				vt := obj.Type()
+				if vt == object.RETURN || vt == object.ERROR {
+					// そのまま上に上げる
+					// ProgramNodeのところで取り出すため (ProgramNodeのところで終われない)
+					return obj
+				}
 			}
 		}
 
@@ -41,7 +73,18 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return obj
 		}
 
+		// 環境に登録
 		env.Set(node.Name.Value, obj)
+
+	case *ast.ReturnNode:
+		obj := Eval(node.Value, env)
+		if isErrorObj(obj) {
+			return obj
+		}
+		return &object.ReturnObj{Value: obj}
+
+	case *ast.EsNode:
+		return Eval(node.Value, env)
 
 	case *ast.IdentNode:
 		if obj, ok := env.Get(node.Value); ok {
@@ -53,9 +96,6 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		return newErrorObj("identifier not found: " + node.Value)
-
-	case *ast.EsNode:
-		return Eval(node.Value, env)
 
 	case *ast.IntNode:
 		return &object.IntObj{Value: node.Value}
@@ -85,6 +125,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		switch {
 
+		// 1.
 		// 先にInt型をやることで、「先に==や!=で変換して比較される」ことを防いでいる
 		case left.Type() == object.INT && right.Type() == object.INT:
 
@@ -113,6 +154,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 			}
 
+		// 2.
 		case left.Type() == object.STRING && right.Type() == object.STRING:
 			if node.Operator != "+" && node.Operator != "==" && node.Operator != "!=" {
 				return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
@@ -129,6 +171,7 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 				return changeBoolObj(leftVal != rightVal)
 			}
 
+		// 3.
 		// オブジェクトを指し示すのにポインタ（参照）のみを使っていて、ポインタを比較すればいい
 		// 		ポインタ（配置されているメモリアドレス）を比較している
 		//  	オブジェクトは、整数かTRUEかFALSEかNULLだけ。整数は先に計算して、残りは参照だけ
@@ -138,29 +181,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		case node.Operator == "!=":
 			return changeBoolObj(left != right)
 
+		// 4.
 		case left.Type() != right.Type():
 			return newErrorObj("type mismatch: %s %s %s", left.Type(), node.Operator, right.Type())
 
 		default:
 			return newErrorObj("unknown operator: %s %s %s", left.Type(), node.Operator, right.Type())
 		}
-
-	case *ast.BlockNode:
-		var obj object.Object
-
-		for _, statement := range node.Statements {
-			obj = Eval(statement, env)
-
-			if obj != nil {
-				vt := obj.Type()
-				if vt == object.RETURN || vt == object.ERROR {
-					// そのまま上に上げる
-					return obj
-				}
-			}
-		}
-
-		return obj
 
 	case *ast.IfNode:
 		condition := Eval(node.Condition, env)
@@ -176,14 +203,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return NULL
 		}
 
-	case *ast.ReturnNode:
-		obj := Eval(node.Value, env)
-		if isErrorObj(obj) {
-			return obj
-		}
-		return &object.ReturnObj{Value: obj}
-
 	case *ast.FunctionNode:
+		// けっこうそのままいれる
 		return &object.FunctionObj{Parameters: node.Parameters, Body: node.Body, Env: env}
 
 	case *ast.CallNode:
@@ -192,7 +213,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return function
 		}
 
-		var args []object.Object
+		// これの方が効率がいい
+		args := make([]object.Object, 0, len(node.Arguments))
 		// 引数を左から右に評価
 		for _, e := range node.Arguments {
 			obj := Eval(e, env)
@@ -207,11 +229,13 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			// パラメータを『拡張した環境』に束縛
 			extendedEnv := object.NewEnclosedEnvironment(fn.Env)
 			for paramIdx, param := range fn.Parameters {
+				// パラメータの変数 ← 評価結果
 				env.Set(param.Value, args[paramIdx])
 			}
 
 			// ボディと『拡張した環境』で評価
 			result := Eval(fn.Body, extendedEnv)
+
 			// もし、結果がReturnオブジェクトだったらそのまま返却
 			// その関数からのリターンだから、これはBlockの時みたいに上に上げなくていい
 			// むしろこのif文がないと、そのままReturnが浮上して処理が止まってしまう
@@ -223,6 +247,8 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 		// 絶対にReturnを返さないので、アンラップする必要がない
 		case *object.BuiltinObj:
+			// 引数の評価結果をそのまま渡す
+			// builtins.go内でよしなに処理
 			return fn.Fn(args...)
 
 		default:
@@ -256,6 +282,10 @@ func isTruthy(obj object.Object) bool {
 	}
 }
 
+// ...--で受け取り
+//
+//		--...で渡す
+//	  ーーなんだよね〜....みたいなイメージかな（違う）
 func newErrorObj(format string, a ...interface{}) *object.ErrorObj {
 	return &object.ErrorObj{Value: fmt.Sprintf(format, a...)}
 }
@@ -269,6 +299,8 @@ func isErrorObj(obj object.Object) bool {
 
 func evalPrefix(operator string, right object.Object) object.Object {
 	switch operator {
+
+	// 否定
 	case "!":
 		switch right {
 		case TRUE:
@@ -281,6 +313,7 @@ func evalPrefix(operator string, right object.Object) object.Object {
 			return FALSE
 		}
 
+	// マイナス
 	case "-":
 		if right.Type() != object.INT {
 			return newErrorObj("unknown operator: -%s", right.Type())
