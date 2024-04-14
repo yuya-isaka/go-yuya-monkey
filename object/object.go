@@ -23,7 +23,7 @@ type ObjectType string
 
 type Object interface {
 	Type() ObjectType
-	Inspect() string
+	Inspect() string // インタプリタで反復的に表示するやつ
 }
 
 // ---------------------------------
@@ -83,10 +83,15 @@ type FunctionObj struct {
 }
 
 func (f FunctionObj) Type() ObjectType { return FUNCTION }
+
+// 関数の表示だるう
 func (f FunctionObj) Inspect() string {
 	var out bytes.Buffer
 
-	params := []string{}
+	// 『var params []string』でも同じ
+	// なぜなら、今回はappendで追加しているから
+	// 他の使い方をするなら注意。
+	params := make([]string, 0, len(f.Parameters))
 	for _, p := range f.Parameters {
 		params = append(params, p.String())
 	}
@@ -94,9 +99,10 @@ func (f FunctionObj) Inspect() string {
 	out.WriteString("fn")
 	out.WriteString("(")
 	out.WriteString(strings.Join(params, ", "))
-	out.WriteString(") {\n")
+	out.WriteString(") {\n  ")
 	out.WriteString(f.Body.String())
 	out.WriteString("\n")
+	out.WriteString("}")
 
 	return out.String()
 }

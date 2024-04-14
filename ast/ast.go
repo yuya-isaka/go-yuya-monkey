@@ -45,16 +45,16 @@ type LetNode struct {
 	Value Expression
 }
 
-func (ls LetNode) statement() {}
-func (ls LetNode) String() string {
+func (l LetNode) statement() {}
+func (l LetNode) String() string {
 	var out bytes.Buffer
 
-	out.WriteString(ls.Token.Name + " ")
-	out.WriteString(ls.Name.String())
+	out.WriteString(l.Token.Name + " ")
+	out.WriteString(l.Name.String())
 	out.WriteString(" = ")
 
-	if ls.Value != nil {
-		out.WriteString(ls.Value.String())
+	if l.Value != nil {
+		out.WriteString(l.Value.String())
 	}
 
 	out.WriteString(";")

@@ -11,6 +11,7 @@ var builtins = map[string]*object.BuiltinObj{
 			}
 
 			switch arg := args[0].(type) {
+			// 1. 文字列
 			case *object.StringObj:
 				return &object.IntObj{Value: int64(len(arg.Value))}
 			default:
