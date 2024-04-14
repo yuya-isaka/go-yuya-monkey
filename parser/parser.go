@@ -55,8 +55,6 @@ func NewParser(l *lexer.Lexer) *Parser {
 }
 
 func (p *Parser) ParseProgram() *ast.ProgramNode {
-	// defer untrace(trace("ParseProgram"))
-
 	node := &ast.ProgramNode{
 		Statements: []ast.Statement{},
 	}
@@ -80,8 +78,6 @@ func (p *Parser) ParseProgram() *ast.ProgramNode {
 }
 
 func (p *Parser) parseStatement() ast.Statement {
-	// defer untrace(trace("parseStatement"))
-
 	switch p.curT.Type {
 	case token.LET:
 		return p.parseLet()
@@ -95,8 +91,6 @@ func (p *Parser) parseStatement() ast.Statement {
 }
 
 func (p *Parser) parseLet() ast.Statement {
-	// defer untrace(trace("parseLet"))
-
 	node := &ast.LetNode{Token: p.curT}
 
 	// let a = 3;
@@ -145,8 +139,6 @@ func (p *Parser) parseLet() ast.Statement {
 }
 
 func (p *Parser) parseReturn() ast.Statement {
-	// defer untrace(trace("parseReturn"))
-
 	node := &ast.ReturnNode{Token: p.curT}
 
 	p.nextToken()
@@ -168,8 +160,6 @@ func (p *Parser) parseReturn() ast.Statement {
 }
 
 func (p *Parser) parseES() ast.Statement {
-	// defer untrace(trace("parseES"))
-
 	node := &ast.EsNode{Token: p.curT}
 	node.Value = p.parseExpression(LOWEST)
 
@@ -183,8 +173,6 @@ func (p *Parser) parseES() ast.Statement {
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
-	// defer untrace(trace("parseExpression"))
-
 	var left ast.Expression
 
 	switch p.curT.Type {
@@ -291,14 +279,10 @@ func (p *Parser) Errors() []string {
 //--------------------
 
 func (p *Parser) parseIdent() ast.Expression {
-	// defer untrace(trace("parseIdent"))
-
 	return &ast.IdentNode{Token: p.curT, Value: p.curT.Name}
 }
 
 func (p *Parser) parseInt() ast.Expression {
-	// defer untrace(trace("parseInt"))
-
 	value, err := strconv.ParseInt(p.curT.Name, 0, 64)
 	if err != nil {
 		msg := fmt.Sprintf("could not parse %q as integer", p.curT.Name)
@@ -310,7 +294,6 @@ func (p *Parser) parseInt() ast.Expression {
 }
 
 func (p *Parser) parsePrefix() ast.Expression {
-	// defer untrace(trace("parsePrefix"))
 
 	node := &ast.PrefixNode{
 		Token:    p.curT,
@@ -325,7 +308,6 @@ func (p *Parser) parsePrefix() ast.Expression {
 }
 
 func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
-	// defer untrace(trace("parseInfix"))
 
 	node := &ast.InfixNode{
 		Token:    p.curT,
@@ -344,13 +326,10 @@ func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseBool() ast.Expression {
-	// defer untrace(trace("parseBool"))
-
 	return &ast.BoolNode{Token: p.curT, Value: p.curToken(token.TRUE)}
 }
 
 func (p *Parser) parseGroup() ast.Expression {
-	// defer untrace(trace("parseGroup"))
 
 	p.nextToken()
 
@@ -364,7 +343,6 @@ func (p *Parser) parseGroup() ast.Expression {
 }
 
 func (p *Parser) parseIf() ast.Expression {
-	// defer untrace(trace("parseIf"))
 
 	node := &ast.IfNode{Token: p.curT}
 
@@ -401,7 +379,6 @@ func (p *Parser) parseIf() ast.Expression {
 
 // 返る先の型が指定されているから、返り値の型はast.Statementではなく*ast.BlockNode
 func (p *Parser) parseBlock() *ast.BlockNode {
-	// defer untrace(trace("parseBlock"))
 
 	node := &ast.BlockNode{
 		Token:      p.curT,
@@ -429,7 +406,6 @@ func (p *Parser) parseBlock() *ast.BlockNode {
 }
 
 func (p *Parser) parseFunction() ast.Expression {
-	// defer untrace(trace("parseFunction"))
 
 	node := &ast.FunctionNode{Token: p.curT}
 
@@ -450,7 +426,6 @@ func (p *Parser) parseFunction() ast.Expression {
 
 // 返る先の型が指定されているから、返り値の型はast.Expressionではなく*ast.IdentNode
 func (p *Parser) parseParameters() []*ast.IdentNode {
-	// defer untrace(trace("parseParameters"))
 
 	nodes := []*ast.IdentNode{}
 
@@ -479,7 +454,6 @@ func (p *Parser) parseParameters() []*ast.IdentNode {
 }
 
 func (p *Parser) parseCall(function ast.Expression) ast.Expression {
-	// defer untrace(trace("parseCall"))
 
 	node := &ast.CallNode{Token: p.curT, Function: function}
 	node.Arguments = p.parseArguments()
@@ -487,7 +461,6 @@ func (p *Parser) parseCall(function ast.Expression) ast.Expression {
 }
 
 func (p *Parser) parseArguments() []ast.Expression {
-	// defer untrace(trace("parseArguments"))
 
 	nodes := []ast.Expression{}
 
