@@ -218,9 +218,9 @@ func (f FunctionNode) expression() {}
 func (f FunctionNode) String() string {
 	var out bytes.Buffer
 
-	params := make([]string, 0, len(f.Parameters))
-	for _, p := range f.Parameters {
-		params = append(params, p.String())
+	params := make([]string, len(f.Parameters))
+	for i, p := range f.Parameters {
+		params[i] = p.String()
 	}
 
 	out.WriteString(f.Token.Name)
@@ -242,9 +242,9 @@ func (c CallNode) expression() {}
 func (c CallNode) String() string {
 	var out bytes.Buffer
 
-	args := make([]string, 0, len(c.Arguments))
-	for _, a := range c.Arguments {
-		args = append(args, a.String())
+	args := make([]string, len(c.Arguments))
+	for i, a := range c.Arguments {
+		args[i] = a.String()
 	}
 
 	out.WriteString(c.Function.String())
@@ -262,3 +262,24 @@ type StringNode struct {
 
 func (s StringNode) expression()    {}
 func (s StringNode) String() string { return s.Token.Name }
+
+type ArrayNode struct {
+	Token  token.Token
+	Values []Expression
+}
+
+func (a ArrayNode) expression() {}
+func (a ArrayNode) String() string {
+	var out bytes.Buffer
+
+	elements := make([]string, len(a.Values))
+	for i, e := range a.Values {
+		elements[i] = e.String()
+	}
+
+	out.WriteString("[")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString("]")
+
+	return out.String()
+}

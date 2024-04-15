@@ -91,9 +91,9 @@ func (f FunctionObj) Inspect() string {
 	// 『var params []string』でも同じ
 	// なぜなら、今回はappendで追加しているから
 	// 他の使い方をするなら注意。
-	params := make([]string, 0, len(f.Parameters))
-	for _, p := range f.Parameters {
-		params = append(params, p.String())
+	params := make([]string, len(f.Parameters))
+	for i, p := range f.Parameters {
+		params[i] = p.String()
 	}
 
 	out.WriteString("fn")

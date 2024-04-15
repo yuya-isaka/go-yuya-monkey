@@ -228,10 +228,12 @@ func (p *Parser) parseES() ast.Statement {
 // --------------------------------------------------------------------------
 
 // precedenceに入っている優先順位は、真左の優先順位
+// parseExpressionは、セミコロンの手前で必ず終わる（セミコロンあるないに関わらず最後で終わる）
 func (p *Parser) parseExpression(precedence int) ast.Expression {
 	var left ast.Expression
 
 	// トークンで呼び出す関数を決める（Pratt構文解析）
+	// 下の関数たちはギリギリまで進める
 	switch p.curT.Type {
 	case token.IDENT:
 		left = p.parseIdent()
@@ -256,6 +258,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 
 	case token.STRING:
 		left = p.parseString()
+
+	case token.LBRACKET:
+		left = p.parseArray()
 
 	default:
 		msg := fmt.Sprintf("no prefix parse function for %s found", p.curT.Type)
@@ -492,15 +497,26 @@ func (p *Parser) parseParameters() []*ast.IdentNode {
 func (p *Parser) parseCall(function ast.Expression) ast.Expression {
 
 	node := &ast.CallNode{Token: p.curT, Function: function}
-	node.Arguments = p.parseArguments()
+	node.Arguments = p.parseExpressions(token.RPAREN)
 	return node
 }
 
-func (p *Parser) parseArguments() []ast.Expression {
+func (p *Parser) parseArray() ast.Expression {
+	array := &ast.ArrayNode{Token: p.curT}
+	array.Values = p.parseExpressions(token.RBRACKET)
+	return array
+}
+
+// callとarray で使っているよ
+// 一般化されている
+func (p *Parser) parseExpressions(end token.TokenType) []ast.Expression {
 
 	nodes := []ast.Expression{}
 
-	if p.peekToken(token.RPAREN) {
+	// 要素なしでreturn
+	// endチェック
+	if p.peekToken(end) {
+		// ギリギリまで進めるよ
 		p.nextToken()
 		return nodes
 	}
@@ -514,7 +530,9 @@ func (p *Parser) parseArguments() []ast.Expression {
 		nodes = append(nodes, p.parseExpression(LOWEST))
 	}
 
-	if !p.expectPeekToken(token.RPAREN) {
+	// nilでreturn
+	// endチェック
+	if !p.expectPeekToken(end) {
 		return nil
 	}
 

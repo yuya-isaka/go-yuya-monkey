@@ -676,6 +676,32 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestParsingArray(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.EsNode)
+	if !ok {
+		t.Fatalf("exp not ast.EsNode. got=%T", program.Statements[0])
+	}
+	array, ok := stmt.Value.(*ast.ArrayNode)
+	if !ok {
+		t.Fatalf("exp not ast.ArrayNode. got=%T", stmt.Value)
+	}
+
+	if len(array.Values) != 3 {
+		t.Fatalf("len(array.Values) not 3. got=%d", len(array.Values))
+	}
+
+	testIntegerContent(t, array.Values[0], 1)
+	testInfixExpression(t, array.Values[1], 2, "*", 2)
+	testInfixExpression(t, array.Values[2], 3, "+", 3)
+}
+
 // -------------------------------- ヘルパー関数
 
 // テスト、文、期待値

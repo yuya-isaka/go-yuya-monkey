@@ -214,14 +214,14 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		}
 
 		// これの方が効率がいい
-		args := make([]object.Object, 0, len(node.Arguments))
+		args := make([]object.Object, len(node.Arguments))
 		// 引数を左から右に評価
-		for _, e := range node.Arguments {
+		for i, e := range node.Arguments {
 			obj := Eval(e, env)
 			if isErrorObj(obj) {
 				return obj
 			}
-			args = append(args, obj)
+			args[i] = obj
 		}
 
 		switch fn := function.(type) {
