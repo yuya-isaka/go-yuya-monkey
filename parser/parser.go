@@ -21,6 +21,7 @@ const (
 	PRODUCT
 	PREFIX
 	CALL
+	INDEX
 )
 
 // 優先順位表
@@ -34,6 +35,7 @@ var precedences = map[token.TokenType]int{
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
 	token.LPAREN:   CALL,
+	token.LBRACKET: INDEX,
 }
 
 type Parser struct {
@@ -279,6 +281,10 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		case token.LPAREN:
 			p.nextToken()
 			left = p.parseCall(left)
+
+		case token.LBRACKET:
+			p.nextToken()
+			left = p.parseIndex(left)
 
 		default:
 			msg := fmt.Sprintf("Infix Error: %T (%+v)", p.peekT, p.peekT)
@@ -541,4 +547,19 @@ func (p *Parser) parseExpressions(end token.TokenType) []ast.Expression {
 
 func (p *Parser) parseString() ast.Expression {
 	return &ast.StringNode{Token: p.curT, Value: p.curT.Name}
+}
+
+func (p *Parser) parseIndex(left ast.Expression) ast.Expression {
+	// 呼ばれるときは先頭
+	node := &ast.IndexNode{Token: p.curT, Left: left}
+	p.nextToken()
+	node.Index = p.parseExpression(LOWEST)
+	// parseExpressionの後は、その式の最後で終わっている
+
+	// 間違っている場合
+	if !p.expectPeekToken(token.RBRACKET) {
+		return nil
+	}
+
+	return node
 }

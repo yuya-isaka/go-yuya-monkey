@@ -263,6 +263,8 @@ type StringNode struct {
 func (s StringNode) expression()    {}
 func (s StringNode) String() string { return s.Token.Name }
 
+// ---------------------------------
+
 type ArrayNode struct {
 	Token  token.Token
 	Values []Expression
@@ -283,3 +285,25 @@ func (a ArrayNode) String() string {
 
 	return out.String()
 }
+
+type IndexNode struct {
+	Token token.Token
+	Left  Expression
+	Index Expression
+}
+
+func (i IndexNode) expression() {}
+func (i IndexNode) String() string {
+	var out bytes.Buffer
+
+	out.WriteString("(")
+	out.WriteString(i.Left.String())
+	out.WriteString("[")
+	out.WriteString(i.Index.String())
+	out.WriteString("]")
+	out.WriteString(")")
+
+	return out.String()
+}
+
+// ---------------------------------

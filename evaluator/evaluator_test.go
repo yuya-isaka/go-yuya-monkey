@@ -364,6 +364,94 @@ func TestBuiltinFunction(t *testing.T) {
 	}
 }
 
+func TestArray(t *testing.T) {
+	input := "[1, 2 * 2, 3 + 3]"
+
+	obj := testEval(input)
+	result, ok := obj.(*object.ArrayObj)
+	if !ok {
+		t.Fatalf("obj is not ArrayObj. got=%T(%+v)", obj, obj)
+	}
+
+	if len(result.Values) != 3 {
+		t.Fatalf("array has wrong num of elements. got=%d", len(result.Values))
+	}
+
+	testIntObj(t, result.Values[0], 1)
+	testIntObj(t, result.Values[1], 4)
+	testIntObj(t, result.Values[2], 6)
+}
+
+func TestArrayIndex(t *testing.T) {
+	tests := []struct {
+		input  string
+		expect interface{}
+	}{
+		{
+			"[1,2,3][0]",
+			1,
+		},
+		{
+			"[1,2,3][1]",
+			2,
+		},
+		{
+			"[1,2,3][2]",
+			3,
+		},
+		{
+			"let i = 0; [1][i];",
+			1,
+		},
+		{
+			"[1,2,3][1+1];",
+			3,
+		},
+		{
+			"let myArray = [1,2,3]; myArray[2];",
+			3,
+		},
+		{
+			"let myArray = [1,2,3]; myArray[0] + myArray[1] + myArray[2];",
+			6,
+		},
+		{
+			"let myArray = [1,2,3]; let i = myArray[0]; myArray[i]",
+			2,
+		},
+		{
+			"[1,2,3][3]",
+			nil,
+		},
+		{
+			"[1,2,3][-1]",
+			nil,
+		},
+		{
+			"let three = fn(x) { return [x,x+1,x+2]; }; three(2)[1]",
+			3,
+		},
+		{
+			"let three = fn(x) { return [x,x+1,x+2]; }; three(10)[0]",
+			10,
+		},
+		{
+			"let three = fn(x) { return [x,x+1,x+2]; }; three(20)[2]",
+			22,
+		},
+	}
+
+	for _, tt := range tests {
+		obj := testEval(tt.input)
+		integer, ok := tt.expect.(int)
+		if ok {
+			testIntObj(t, obj, int64(integer))
+		} else {
+			testNullObj(t, obj)
+		}
+	}
+}
+
 // --------------------------------
 
 func testEval(input string) object.Object {

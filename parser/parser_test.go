@@ -356,6 +356,18 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 			"add(a + b + c * d / f + g)",
 			"add((((a + b) + ((c * d) / f)) + g))",
 		},
+		{
+			"a * [1, 2, 3, 4][b * c] * d",
+			"((a * ([1, 2, 3, 4][(b * c)])) * d)",
+		},
+		{
+			"add(a * b[2], b[1], 2 * [1, 2][1])",
+			"add((a * (b[2])), (b[1]), (2 * ([1, 2][1])))",
+		},
+		{
+			"add(a, b)[3]",
+			"(add(a, b)[3])",
+		},
 	}
 
 	for _, tt := range tests {
@@ -700,6 +712,32 @@ func TestParsingArray(t *testing.T) {
 	testIntegerContent(t, array.Values[0], 1)
 	testInfixExpression(t, array.Values[1], 2, "*", 2)
 	testInfixExpression(t, array.Values[2], 3, "+", 3)
+}
+
+func TestParsingIndex(t *testing.T) {
+	input := "myArray[1 + 1]"
+
+	l := lexer.NewLexer(input)
+	p := NewParser(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	stmt, ok := program.Statements[0].(*ast.EsNode)
+	if !ok {
+		t.Fatalf("program.Statements[0] is not ast.EsNode. got=%T", program.Statements[0])
+	}
+	index, ok := stmt.Value.(*ast.IndexNode)
+	if !ok {
+		t.Fatalf("stmt.Value is not ast.IndexNode. got=%T", stmt.Value)
+	}
+
+	if !testIdentifier(t, index.Left, "myArray") {
+		return
+	}
+
+	if !testInfixExpression(t, index.Index, 1, "+", 1) {
+		return
+	}
 }
 
 // -------------------------------- ヘルパー関数

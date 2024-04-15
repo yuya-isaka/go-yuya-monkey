@@ -255,6 +255,44 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return newErrorObj("not a function: %s", function.Type()) // 存在していないfn.Type()しててランタイムエラーになっていた
 		}
 
+	case *ast.ArrayNode:
+		values := make([]object.Object, len(node.Values))
+		for i, v := range node.Values {
+			obj := Eval(v, env)
+			if isErrorObj(obj) {
+				return obj
+			}
+			values[i] = obj
+		}
+
+		return &object.ArrayObj{Values: values}
+
+	case *ast.IndexNode:
+		left := Eval(node.Left, env)
+		if isErrorObj(left) {
+			return left
+		}
+		index := Eval(node.Index, env)
+		if isErrorObj(index) {
+			return index
+		}
+
+		switch {
+		case left.Type() == object.ARRAY && index.Type() == object.INT:
+			array := left.(*object.ArrayObj)
+			idx := index.(*object.IntObj).Value
+			max := int64(len(array.Values) - 1)
+
+			if idx < 0 || max < idx {
+				return NULL
+			}
+
+			return array.Values[idx]
+
+		default:
+			return newErrorObj("index operator not supported: %s", left.Type())
+		}
+
 	}
 
 	return nil
