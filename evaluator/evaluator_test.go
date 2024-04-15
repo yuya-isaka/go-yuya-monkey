@@ -439,6 +439,10 @@ func TestArrayIndex(t *testing.T) {
 			"let three = fn(x) { return [x,x+1,x+2]; }; three(20)[2]",
 			22,
 		},
+		{
+			"-[2,3,4][2]",
+			-4,
+		},
 	}
 
 	for _, tt := range tests {

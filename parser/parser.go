@@ -277,11 +277,17 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 			p.nextToken()
 			left = p.parseInfix(left)
 
-			// 関数呼び出し
+		// 関数呼び出し
 		case token.LPAREN:
 			p.nextToken()
 			left = p.parseCall(left)
 
+		// 関数の後の[は、関数の評価された後のleftが入ってくる。それを配列の左辺として使う
+		// 基本関数の左辺は変数しかこなくて、その場合precedenceは変数の優先順位(つまりLOWEST)
+		// 関数より優先順位が低くても問題にはならない
+		// 他のやつは問題になる（問題というかこれはどういう設計にするかという話でもある）
+		// 			*が左にある場合（3 * [1,2,3][1]）は、*より優先順位が低いと左に引っ張られる
+		// 			-や!が左にある場合（-[2,3,4][2]）は、-より優先順位が低いと左に引っ張られる
 		case token.LBRACKET:
 			p.nextToken()
 			left = p.parseIndex(left)
@@ -381,6 +387,7 @@ func (p *Parser) parsePrefix() ast.Expression {
 	return node
 }
 
+// これはトークンが真ん中の状態で呼ばれる
 func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
 
 	node := &ast.InfixNode{
@@ -393,6 +400,13 @@ func (p *Parser) parseInfix(left ast.Expression) ast.Expression {
 	// parseExpressionを呼び出すときの、precedenceをどうするかで大きく変わってくる。
 	precedence := p.curPrecedence()
 	p.nextToken()
+	// ここで式を再度呼ぶの痺れるな〜
+	// ここが痺れるポイント覚えとけよー
+	// ここでこのInfixのprecedence vs 次のpeekPrecedenceになってくる
+	// 例えば 3 * [1,2,3,4][2]の場合、precedenceは*の優先順位 nextTokenは[で渡される
+	// で、[1,2,3,4]が評価された後、forループに入って[が評価される
+	//		ここで[の優先順位が低かったら、*に負けて、この右辺（[1,2,3,4]）は*に吸い込まれる
+	//		でも[の優先順位が高かったら、[が勝って、*の右辺になるはずだったものは[の方に吸い込まれる（さらに右に）
 	node.Right = p.parseExpression(precedence)
 
 	return node
