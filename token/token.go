@@ -29,6 +29,8 @@ const (
 	TRUE      = "TRUE"
 	FALSE     = "FALSE"
 	STRING    = "STRING"
+	LBRACKET  = "["
+	RBRACKET  = "]"
 )
 
 type TokenType string

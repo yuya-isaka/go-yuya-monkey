@@ -82,6 +82,10 @@ func (l *Lexer) NextToken() token.Token {
 			}
 		}
 		tok = newToken(token.STRING, l.input[pos:l.pos])
+	case '[':
+		tok = newToken(token.LBRACKET, string(l.ch))
+	case ']':
+		tok = newToken(token.RBRACKET, string(l.ch))
 	default:
 		switch {
 		case isLetter(l.ch):
