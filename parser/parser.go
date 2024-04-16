@@ -264,6 +264,9 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	case token.LBRACKET:
 		left = p.parseArray()
 
+	case token.LBRACE:
+		left = p.parseHash()
+
 	default:
 		msg := fmt.Sprintf("no prefix parse function for %s found", p.curT.Type)
 		p.errors = append(p.errors, msg)
@@ -576,4 +579,35 @@ func (p *Parser) parseIndex(left ast.Expression) ast.Expression {
 	}
 
 	return node
+}
+
+func (p *Parser) parseHash() ast.Expression {
+	hash := &ast.HashNode{Token: p.curT}
+	hash.Pairs = make(map[ast.Expression]ast.Expression)
+
+	// 次に}が来たら終わる
+	for !p.peekToken(token.RBRACE) {
+		p.nextToken()
+		key := p.parseExpression(LOWEST)
+
+		if !p.expectPeekToken(token.COLON) {
+			return nil
+		}
+
+		p.nextToken()
+		value := p.parseExpression(LOWEST)
+
+		hash.Pairs[key] = value
+
+		// "}"でも","でもないのは、アウト
+		if !p.peekToken(token.RBRACE) && !p.expectPeekToken(token.COMMA) {
+			return nil
+		}
+	}
+
+	if !p.expectPeekToken(token.RBRACE) {
+		return nil
+	}
+
+	return hash
 }

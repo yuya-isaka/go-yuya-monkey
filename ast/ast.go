@@ -307,3 +307,24 @@ func (i IndexNode) String() string {
 }
 
 // ---------------------------------
+
+type HashNode struct {
+	Token token.Token
+	Pairs map[Expression]Expression
+}
+
+func (h HashNode) expression() {}
+func (h HashNode) String() string {
+	var out bytes.Buffer
+
+	pairs := []string{}
+	for key, value := range h.Pairs {
+		pairs = append(pairs, key.String()+":"+value.String())
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ","))
+	out.WriteString("}")
+
+	return out.String()
+}
