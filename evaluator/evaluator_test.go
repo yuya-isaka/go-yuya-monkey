@@ -349,7 +349,7 @@ func TestBuiltinFunction(t *testing.T) {
 
 		{`len([1, 2, 3])`, 3},
 		{`len([])`, 0},
-		// {`puts("hello", "world!")`, nil},
+		{`puts("hello", "world!")`, nil},
 		{`first([1, 2, 3])`, 1},
 		{`first(1)`, "argument to `first` must be ARRAY, got INT"},
 		{`last([1, 2, 3])`, 3},
