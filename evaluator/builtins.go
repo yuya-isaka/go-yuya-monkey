@@ -89,11 +89,13 @@ var builtins = map[string]*object.BuiltinObj{
 				return newErrorObj("argument to `push` must be ARRAY, got %s", args[0].Type())
 			}
 
+			// 1つ目の引数が配列
 			array := args[0].(*object.ArrayObj)
 			length := len(array.Values)
 
 			newValues := make([]object.Object, length+1)
 			copy(newValues, array.Values)
+			// 2つ目の引数が追加する値
 			newValues[length] = args[1]
 
 			return &object.ArrayObj{Values: newValues}
