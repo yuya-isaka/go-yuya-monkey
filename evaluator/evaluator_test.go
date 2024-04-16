@@ -342,6 +342,17 @@ func TestBuiltinFunction(t *testing.T) {
 		{`len("hello world")`, 11},
 		{`len(1)`, "argument to `len` not supported, got INT"},
 		{`len("one", "two")`, "wrong number of arguments. got=2, want=1"},
+
+		{`len([1, 2, 3])`, 3},
+		{`len([])`, 0},
+		// {`puts("hello", "world!")`, nil},
+		{`first([1, 2, 3])`, 1},
+		{`first(1)`, "argument to `first` must be ARRAY, got INT"},
+		{`last([1, 2, 3])`, 3},
+		{`rest([1, 2, 3])`, []int{2, 3}},
+		{`rest([])`, nil},
+		{`push([], 1)`, []int{1}},
+		{`push(1, 1)`, "argument to `push` must be ARRAY, got INT"},
 	}
 
 	for _, tt := range tests {
@@ -350,15 +361,35 @@ func TestBuiltinFunction(t *testing.T) {
 		switch expect := tt.expect.(type) {
 		case int:
 			testIntObj(t, obj, int64(expect))
+		case nil:
+			testNullObj(t, obj)
 		case string:
 			errObj, ok := obj.(*object.ErrorObj)
 			if !ok {
 				t.Errorf("object is not Error. got=%T (%+v)", obj, obj)
+				// 続けないと終わっちゃうので
 				continue
 			}
 
 			if errObj.Value != expect {
 				t.Errorf("wrong error message. expected=%q, got=%q", expect, errObj.Value)
+			}
+		case []int:
+			array, ok := obj.(*object.ArrayObj)
+			if !ok {
+				t.Errorf("obj not Array. got=%T (%+v)", obj, obj)
+				continue
+			}
+
+			if len(array.Values) != len(expect) {
+				t.Errorf("wrong num of values. want=%d, got=%d", len(expect), len(array.Values))
+				continue
+			}
+
+			// 一旦今回のテストはint64に絞っている
+			// 本来はどの型でも配列は持てる（テストしていないだけ）
+			for i, expectValue := range expect {
+				testIntObj(t, array.Values[i], int64(expectValue))
 			}
 		}
 	}
