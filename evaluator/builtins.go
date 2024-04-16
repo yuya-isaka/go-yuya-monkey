@@ -1,6 +1,10 @@
 package evaluator
 
-import "github.com/yuya-isaka/go-yuya-monkey/object"
+import (
+	"fmt"
+
+	"github.com/yuya-isaka/go-yuya-monkey/object"
+)
 
 var builtins = map[string]*object.BuiltinObj{
 	// 現状ただのラッパー
@@ -99,6 +103,15 @@ var builtins = map[string]*object.BuiltinObj{
 			newValues[length] = args[1]
 
 			return &object.ArrayObj{Values: newValues}
+		},
+	},
+	"puts": &object.BuiltinObj{
+		Fn: func(args ...object.Object) object.Object {
+			for _, arg := range args {
+				fmt.Println(arg.Inspect())
+			}
+
+			return NULL
 		},
 	},
 }

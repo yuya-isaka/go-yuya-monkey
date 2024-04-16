@@ -20,6 +20,7 @@ const (
 	BUILTIN  = "BUILTIN"
 	ARRAY    = "ARRAY"
 	HASH     = "HASH"
+	QUOTE    = "QUOTE"
 )
 
 type ObjectType string
@@ -209,4 +210,14 @@ func (h HashObj) Inspect() string {
 	out.WriteString("}")
 
 	return out.String()
+}
+
+// Objectインタフェースを満たすようにするために、ノードをラップする
+type QuoteObj struct {
+	Node ast.Node
+}
+
+func (q QuoteObj) Type() ObjectType { return QUOTE }
+func (q QuoteObj) Inspect() string {
+	return "QUOTE(" + q.Node.String() + ")"
 }

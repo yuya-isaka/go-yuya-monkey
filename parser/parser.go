@@ -255,6 +255,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 	case token.IF:
 		left = p.parseIf()
 
+	// lexerのキーワード登録から割り当てられる。fnが来たらtoken.FUNCTION
 	case token.FUNCTION:
 		left = p.parseFunction()
 

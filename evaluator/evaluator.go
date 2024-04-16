@@ -208,6 +208,12 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 		return &object.FunctionObj{Parameters: node.Parameters, Body: node.Body, Env: env}
 
 	case *ast.CallNode:
+		// Functionにあるのは変数として認識されている
+		// lexerで、// キーワードじゃなかったら変数
+		if node.Function.String() == "quote" {
+			return quote(node.Arguments[0])
+		}
+
 		function := Eval(node.Function, env)
 		if isErrorObj(function) {
 			return function
