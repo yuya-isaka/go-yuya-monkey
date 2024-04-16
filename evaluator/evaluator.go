@@ -289,6 +289,23 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 
 			return array.Values[idx]
 
+		case left.Type() == object.HASH:
+			hashObj := left.(*object.HashObj)
+
+			// インデックスはハッシュブルなはず
+			key, ok := index.(object.Hashable)
+			if !ok {
+				return newErrorObj("unusable as hash key: %s", index.Type())
+			}
+
+			// ペアを取得
+			pair, ok := hashObj.Pairs[key.HashKey()]
+			if !ok {
+				return NULL
+			}
+
+			return pair.Value
+
 		default:
 			return newErrorObj("index operator not supported: %s", left.Type())
 		}
