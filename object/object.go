@@ -19,6 +19,7 @@ const (
 	STRING   = "STRING"
 	BUILTIN  = "BUILTIN"
 	ARRAY    = "ARRAY"
+	HASH     = "HASH"
 )
 
 type ObjectType string
@@ -26,6 +27,10 @@ type ObjectType string
 type Object interface {
 	Type() ObjectType
 	Inspect() string // インタプリタで反復的に表示するやつ
+}
+
+type Hashable interface {
+	HashKey() HashKey
 }
 
 // ---------------------------------
@@ -177,4 +182,31 @@ func (s *StringObj) HashKey() HashKey {
 	h.Write([]byte(s.Value))
 
 	return HashKey{Type: s.Type(), Value: h.Sum64()}
+}
+
+type HashPair struct {
+	Key   Object
+	Value Object
+}
+
+// Inspect()でキーも表示したからどっちも保持したい。
+// なのでHashPairが値
+type HashObj struct {
+	Pairs map[HashKey]HashPair
+}
+
+func (h HashObj) Type() ObjectType { return HASH }
+func (h HashObj) Inspect() string {
+	var out bytes.Buffer
+
+	pairs := make([]string, 0, len(h.Pairs))
+	for _, pair := range h.Pairs {
+		pairs = append(pairs, fmt.Sprintf("%s: %s", pair.Key.Inspect(), pair.Value.Inspect()))
+	}
+
+	out.WriteString("{")
+	out.WriteString(strings.Join(pairs, ", "))
+	out.WriteString("}")
+
+	return out.String()
 }

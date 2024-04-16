@@ -293,6 +293,33 @@ func Eval(node ast.Node, env *object.Environment) object.Object {
 			return newErrorObj("index operator not supported: %s", left.Type())
 		}
 
+	case *ast.HashNode:
+		pairs := make(map[object.HashKey]object.HashPair)
+
+		for keyNode, valueNode := range node.Pairs {
+			key := Eval(keyNode, env)
+			if isErrorObj(key) {
+				return key
+			}
+
+			// キーがハッシュ化可能かどうか
+			hashKey, ok := key.(object.Hashable)
+			if !ok {
+				return newErrorObj("unusable as hash key: %s", key.Type())
+			}
+
+			value := Eval(valueNode, env)
+			if isErrorObj(value) {
+				return value
+			}
+
+			// キーをハッシュ化
+			hashed := hashKey.HashKey()
+			pairs[hashed] = object.HashPair{Key: key, Value: value}
+		}
+
+		return &object.HashObj{Pairs: pairs}
+
 	}
 
 	return nil

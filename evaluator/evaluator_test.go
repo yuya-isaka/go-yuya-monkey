@@ -487,6 +487,46 @@ func TestArrayIndex(t *testing.T) {
 	}
 }
 
+func TestHash(t *testing.T) {
+	input := `let two = "two";
+	{
+		"one": 10 - 9,
+		two: 1 + 1,
+		"thr" + "ee": 6/ 2,
+		4: 4,
+		true: 5,
+		false: 6
+	}`
+
+	obj := testEval(input)
+	result, ok := obj.(*object.HashObj)
+	if !ok {
+		t.Fatalf("Eval didn't return HashObj. got=%T (%+v)", obj, obj)
+	}
+
+	expect := map[object.HashKey]int64{
+		(&object.StringObj{Value: "one"}).HashKey():   1,
+		(&object.StringObj{Value: "two"}).HashKey():   2,
+		(&object.StringObj{Value: "three"}).HashKey(): 3,
+		(&object.IntObj{Value: 4}).HashKey():          4,
+		TRUE.HashKey():                                5,
+		FALSE.HashKey():                               6,
+	}
+
+	if len(result.Pairs) != len(expect) {
+		t.Fatalf("Hash has wrong num of pairs. got=%d", len(result.Pairs))
+	}
+
+	for expectKey, expectValue := range expect {
+		pair, ok := result.Pairs[expectKey]
+		if !ok {
+			t.Errorf("no pair for given key in Pairs")
+		}
+
+		testIntObj(t, pair.Value, expectValue)
+	}
+}
+
 // --------------------------------
 
 func testEval(input string) object.Object {
