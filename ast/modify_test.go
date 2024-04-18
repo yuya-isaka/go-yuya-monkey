@@ -9,7 +9,8 @@ func TestModify(t *testing.T) {
 	one := func() Expression { return &IntNode{Value: 1} }
 	two := func() Expression { return &IntNode{Value: 2} }
 
-	turnOneTwo := func(node Node) Node {
+	// IntNodeの値を書き換える関数
+	turnOneTwoIntNode := func(node Node) Node {
 		integer, ok := node.(*IntNode)
 		if !ok {
 			return node
@@ -46,11 +47,12 @@ func TestModify(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		modified := Modify(tt.input, turnOneTwo)
+		// tt.inputをturnOneTwoに適用
+		result := Modify(tt.input, turnOneTwoIntNode)
 
-		equal := reflect.DeepEqual(modified, tt.expect)
+		equal := reflect.DeepEqual(result, tt.expect)
 		if !equal {
-			t.Errorf("not equal. got=%#v, want=%#v", modified, tt.expect)
+			t.Errorf("not equal. got=%#v, want=%#v", result, tt.expect)
 		}
 	}
 }
